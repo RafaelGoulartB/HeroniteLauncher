@@ -170,6 +170,9 @@ export async function previewGameMetadata(
   const runner = asRunner(args.runner)
   const current = getGameMetadata(runner, args.appName)
   const candidates = await gatherCandidates({ ...args, runner })
+  const hasFieldPicks = Boolean(
+    args.fieldPicks && Object.keys(args.fieldPicks).length
+  )
   const proposed = mergeMetadata({
     appName: args.appName,
     runner,
@@ -177,7 +180,9 @@ export async function previewGameMetadata(
     candidates,
     priority: withPreferredSource(settingsPriority(), args.source),
     overwriteExisting: args.overwriteExisting !== false,
-    preserveManual: args.preserveManual ?? args.overwriteExisting === false,
+    preserveManual: hasFieldPicks
+      ? false
+      : (args.preserveManual ?? args.overwriteExisting === false),
     fieldPicks: args.fieldPicks
   })
   return {

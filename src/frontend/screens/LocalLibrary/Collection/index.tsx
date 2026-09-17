@@ -291,7 +291,7 @@ export default function Collection() {
 
   useEffect(() => {
     void reload()
-  }, [])
+  }, [sideloadedLibrary])
 
   useEffect(() => {
     void window.api.localLibrary.getMetadataBulkStatus().then((next) => {

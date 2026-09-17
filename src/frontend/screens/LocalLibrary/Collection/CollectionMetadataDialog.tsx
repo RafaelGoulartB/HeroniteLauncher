@@ -127,13 +127,15 @@ export default function CollectionMetadataDialog({
         steamAppId,
         source,
         igdbId: nextIgdbId,
-        overwriteExisting: true
+        overwriteExisting: true,
+        preserveManual: false
       })
       setPreview(next)
       const nextPicks: Partial<Record<MetadataField, FieldPick>> = {}
       for (const field of METADATA_FIELDS) {
         const chosen = next.proposed.fieldSources[field]
-        if (chosen) nextPicks[field] = chosen
+        if (!chosen) continue
+        nextPicks[field] = chosen === 'manual' ? 'keep' : chosen
       }
       setPicks(nextPicks)
       if (next.proposed.igdbId) setIgdbId(next.proposed.igdbId)
@@ -181,7 +183,8 @@ export default function CollectionMetadataDialog({
         source,
         igdbId,
         fieldPicks: picks,
-        overwriteExisting: true
+        overwriteExisting: true,
+        preserveManual: false
       })
       onChange(next)
       onClose()
@@ -323,8 +326,10 @@ export default function CollectionMetadataDialog({
                 })
               }
               if (options.length <= 1 && !options[0]?.value) return null
-              const selected =
+              const selectedPick =
                 picks[field] || preview.proposed.fieldSources[field] || 'keep'
+              const selected =
+                selectedPick === 'manual' ? 'keep' : selectedPick
               return (
                 <section
                   key={field}

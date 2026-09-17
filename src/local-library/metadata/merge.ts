@@ -109,11 +109,13 @@ export function mergeMetadata(args: {
 
   for (const field of METADATA_FIELDS) {
     const pick = args.fieldPicks?.[field]
-    if (pick === 'keep') {
-      next.fieldSources[field] = 'manual'
+    if (pick === 'keep' || pick === 'manual') {
+      next.fieldSources[field] =
+        args.current?.fieldSources?.[field] ?? 'manual'
       continue
     }
     const lockedManual =
+      !pick &&
       Boolean(args.preserveManual) &&
       args.current?.fieldSources?.[field] === 'manual'
     if (lockedManual) continue
