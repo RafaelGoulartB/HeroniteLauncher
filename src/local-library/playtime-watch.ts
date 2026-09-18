@@ -197,7 +197,7 @@ export function stopLocalPlaytimeWatch(
     session.abort.abort()
   }
 
-  if (options?.killProcess !== false) {
+  if (options?.killProcess) {
     for (const pid of session.pids) {
       if (!isPidAlive(pid)) continue
       try {
