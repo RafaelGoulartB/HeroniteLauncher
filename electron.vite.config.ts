@@ -20,7 +20,11 @@ export default defineConfig(({ mode }) => ({
   main: {
     build: {
       rollupOptions: {
-        input: 'src/backend/main.ts'
+        input: 'src/backend/main.ts',
+        output: {
+          chunkFileNames: `chunks/[name].js`,
+          assetFileNames: `chunks/[name].[ext]`
+        }
       },
       outDir: 'build/main',
       minify: false,
@@ -35,6 +39,10 @@ export default defineConfig(({ mode }) => ({
         input: {
           index: 'src/preload/index.ts',
           webviewPreload: 'src/webviewPreload/index.ts'
+        },
+        output: {
+          chunkFileNames: `chunks/[name].js`,
+          assetFileNames: `chunks/[name].[ext]`
         }
       },
       outDir: 'build/preload',
@@ -48,7 +56,11 @@ export default defineConfig(({ mode }) => ({
     root: '.',
     build: {
       rollupOptions: {
-        input: path.resolve('index.html')
+        input: path.resolve('index.html'),
+        output: {
+          chunkFileNames: `assets/[name].js`,
+          assetFileNames: `assets/[name].[ext]`
+        }
       },
       target: 'esnext',
       outDir: 'build',
