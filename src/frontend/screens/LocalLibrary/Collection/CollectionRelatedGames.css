@@ -1,0 +1,152 @@
+.collectionRelated {
+  min-width: 0;
+}
+
+.collectionRelated h3 {
+  margin: 0 0 0.55rem;
+}
+
+.collectionRelated__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.collectionRelated__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0 0 0.45rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+.collectionRelated__toggle:hover {
+  color: #fff;
+}
+
+.collectionRelated__chevron {
+  font-size: 1.15rem;
+  transition: transform 0.18s ease;
+}
+
+.collectionRelated__toggle[aria-expanded='false'] .collectionRelated__chevron {
+  transform: rotate(-90deg);
+}
+
+.collectionRelated__row {
+  display: flex;
+  gap: 0.7rem;
+  overflow-x: auto;
+  padding: 0 0 0.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.collectionRelated__row::-webkit-scrollbar {
+  height: 3px;
+}
+
+.collectionRelated__row::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 99px;
+}
+
+.collectionRelated__game {
+  flex: 0 0 78px;
+  width: 78px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.collectionRelated__cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.collection[data-cover-aspect='igdb'] .collectionRelated__cover {
+  aspect-ratio: 3 / 4;
+}
+
+.collection[data-cover-aspect='gog'] .collectionRelated__cover {
+  aspect-ratio: 11 / 15;
+}
+
+.collection[data-cover-aspect='square'] .collectionRelated__cover {
+  aspect-ratio: 1 / 1;
+}
+
+.collection[data-cover-aspect='dvd'] .collectionRelated__cover {
+  aspect-ratio: 5 / 7;
+}
+
+.collection[data-cover-aspect='banner'] .collectionRelated__cover {
+  aspect-ratio: 16 / 9;
+}
+
+.collectionRelated__game:hover .collectionRelated__cover {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.58);
+  transform: translateY(-2px);
+}
+
+.collectionRelated__title {
+  display: block;
+  margin-top: 0.38rem;
+  font-size: 11px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.82);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+
+.collectionRelated--page {
+  margin-top: var(--space-md);
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--neutral-04);
+  font-size: var(--text-sm);
+  line-height: 1.3;
+}
+
+.collectionRelated--page h3 {
+  color: var(--text-default);
+  font-size: var(--text-md);
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.collectionRelated--page .collectionRelated__toggle {
+  color: var(--text-default);
+  text-shadow: none;
+}
+
+.collectionRelated--page .collectionRelated__title {
+  color: var(--neutral-06);
+  text-shadow: none;
+}
+
+.collectionRelated--page .collectionRelated__cover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}

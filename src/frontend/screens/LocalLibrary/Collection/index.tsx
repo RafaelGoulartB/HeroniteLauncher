@@ -861,6 +861,15 @@ export default function Collection() {
                 ]
               : undefined
           }
+          games={games}
+          collectionMetadata={collectionMetadata}
+          collectionArtMap={collectionArt}
+          metas={metas}
+          onSelectGame={(next) => {
+            const key = gameKey(next)
+            persistFocusedKey(key)
+            setFocusedKey(key)
+          }}
           onMetadataChange={(next) => {
             if (!paintedGame) return
             setCollectionMetadata((current) => ({

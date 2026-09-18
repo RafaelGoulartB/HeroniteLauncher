@@ -42,10 +42,16 @@ import { formatPlaytimeMinutes } from './playtime'
 import { STATUS_COLORS } from './statusColors'
 import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
-import { collectionCoverSrc, collectionStageArt } from './steamArt'
+import {
+  collectionArtKey,
+  collectionCoverSrc,
+  collectionMetadataKey,
+  collectionStageArt
+} from './steamArt'
 import { sanitizeSteamDescription } from './steamHtml'
 import CollectionGameArtDialog from './CollectionGameArtDialog'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
+import CollectionRelatedGames from './CollectionRelatedGames'
 import CollectionScreenshots from './CollectionScreenshots'
 import PickRomDialog from './PickRomDialog'
 import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
@@ -56,6 +62,7 @@ import {
   type CollectionFacetFilters,
   type CollectionFacetKind
 } from './collectionFacets'
+import { collectRelatedGames } from './relatedGames'
 import { EMPTY_TAG_OPTIONS, type CollectionTagKind } from './collectionTags'
 import './CollectionFocus.css'
 
@@ -77,12 +84,17 @@ type Props = {
   collectionArt?: CollectionGameArt
   metadata?: CollectionGameMetadata
   cachedHeroUrl?: string
+  games?: GameInfo[]
+  collectionMetadata?: Record<string, CollectionGameMetadata>
+  collectionArtMap?: Record<string, CollectionGameArt>
+  metas?: Record<string, LocalGameMeta>
   facetFilters?: CollectionFacetFilters
   onFacetFilter?: (kind: CollectionFacetKind, value: string) => void
   tagOptions?: Record<CollectionTagKind, string[]>
   onArtChange: (art: CollectionGameArt) => void
   onMetadataChange: (metadata: CollectionGameMetadata) => void
   onMetaChange?: (meta: LocalGameMeta) => void
+  onSelectGame?: (game: GameInfo) => void
   onClose: () => void
   screenshotsFolder?: string
 }
@@ -195,12 +207,17 @@ export default function CollectionFocus({
   collectionArt,
   metadata,
   cachedHeroUrl,
+  games,
+  collectionMetadata,
+  collectionArtMap,
+  metas,
   facetFilters,
   onFacetFilter,
   tagOptions,
   onArtChange,
   onMetadataChange,
   onMetaChange,
+  onSelectGame,
   onClose,
   screenshotsFolder
 }: Props) {
@@ -222,12 +239,17 @@ export default function CollectionFocus({
       collectionArt={collectionArt}
       metadata={metadata}
       cachedHeroUrl={cachedHeroUrl}
+      games={games}
+      collectionMetadata={collectionMetadata}
+      collectionArtMap={collectionArtMap}
+      metas={metas}
       facetFilters={facetFilters}
       onFacetFilter={onFacetFilter}
       tagOptions={tagOptions}
       onArtChange={onArtChange}
       onMetadataChange={onMetadataChange}
       onMetaChange={onMetaChange}
+      onSelectGame={onSelectGame}
       onClose={onClose}
       screenshotsFolder={screenshotsFolder}
     />
@@ -241,12 +263,17 @@ function CollectionFocusPanel({
   collectionArt,
   metadata: metadataFromList,
   cachedHeroUrl,
+  games = [],
+  collectionMetadata = {},
+  collectionArtMap = {},
+  metas = {},
   facetFilters = EMPTY_FACET_FILTERS,
   onFacetFilter,
   tagOptions = EMPTY_TAG_OPTIONS,
   onArtChange,
   onMetadataChange,
   onMetaChange,
+  onSelectGame,
   onClose,
   screenshotsFolder
 }: {
@@ -256,12 +283,17 @@ function CollectionFocusPanel({
   collectionArt?: CollectionGameArt
   metadata?: CollectionGameMetadata
   cachedHeroUrl?: string
+  games?: GameInfo[]
+  collectionMetadata?: Record<string, CollectionGameMetadata>
+  collectionArtMap?: Record<string, CollectionGameArt>
+  metas?: Record<string, LocalGameMeta>
   facetFilters?: CollectionFacetFilters
   onFacetFilter?: (kind: CollectionFacetKind, value: string) => void
   tagOptions?: Record<CollectionTagKind, string[]>
   onArtChange: (art: CollectionGameArt) => void
   onMetadataChange: (metadata: CollectionGameMetadata) => void
   onMetaChange?: (meta: LocalGameMeta) => void
+  onSelectGame?: (game: GameInfo) => void
   onClose: () => void
   screenshotsFolder?: string
 }) {
@@ -475,6 +507,29 @@ function CollectionFocusPanel({
     const locked = achievements.filter((item) => !item.date_unlocked)
     return [...unlocked, ...locked].slice(0, 8)
   }, [achievements])
+  const relatedGroups = useMemo(
+    () =>
+      collectRelatedGames({
+        current: gameInfo,
+        series: metadata?.series ? [metadata.series] : [],
+        developers,
+        games,
+        metadataFor: (item) =>
+          collectionMetadata[collectionMetadataKey(item.runner, item.app_name)],
+        artFor: (item) =>
+          collectionArtMap[collectionArtKey(item.runner, item.app_name)],
+        steamAppIdFor: (item) => metas[item.app_name]?.steamAppId
+      }),
+    [
+      gameInfo,
+      metadata?.series,
+      developers,
+      games,
+      collectionMetadata,
+      collectionArtMap,
+      metas
+    ]
+  )
 
   async function openSteamFromCollection() {
     if (!steamAppId) return
@@ -630,6 +685,12 @@ function CollectionFocusPanel({
                 </p>
               )}
             </section>
+            {onSelectGame && (
+              <CollectionRelatedGames
+                groups={relatedGroups}
+                onSelect={onSelectGame}
+              />
+            )}
           </div>
 
           <div className="collectionFocus__aside">

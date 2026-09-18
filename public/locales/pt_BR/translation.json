@@ -204,6 +204,13 @@
         "unsync": "Dessincronizar",
         "continue": "Continuar"
     },
+    "collection": {
+        "focus": {
+            "related": "Jogos relacionados",
+            "sameDeveloper": "Mesmo desenvolvedor",
+            "sameSeries": "Mesma série"
+        }
+    },
     "controller": {
         "hints": {
             "back": "Voltar",

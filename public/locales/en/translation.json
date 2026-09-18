@@ -297,6 +297,9 @@
         },
         "focus": {
             "notes": "Notes",
+            "related": "Related games",
+            "sameDeveloper": "Same developer",
+            "sameSeries": "Same series",
             "screenshots": "Screenshots",
             "screenshotsDelete": "Move screenshot to trash",
             "screenshotsDeleteConfirm": "Move “{{name}}” to the trash?",
