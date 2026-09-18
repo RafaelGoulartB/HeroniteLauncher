@@ -18,11 +18,24 @@ const dependenciesToNotExternalize = [
 
 const optionalNativeDeps = ['ws', 'bufferutil', 'utf-8-validate']
 
+function reportMainBuildWarning(
+  warning: { message: string },
+  warn: (warning: { message: string }) => void
+) {
+  const isIntentionalOverlayImport =
+    warning.message.includes('src/local-library/') &&
+    warning.message.includes(
+      'dynamic import will not move module into another chunk'
+    )
+  if (!isIntentionalOverlayImport) warn(warning)
+}
+
 export default defineConfig(({ mode }) => ({
   main: {
     build: {
       rollupOptions: {
         input: 'src/backend/main.ts',
+        onwarn: reportMainBuildWarning,
         output: {
           chunkFileNames: `chunks/[name].js`,
           assetFileNames: `chunks/[name].[ext]`
