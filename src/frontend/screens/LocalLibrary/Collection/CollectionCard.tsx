@@ -42,14 +42,8 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { timestampStore } from 'frontend/helpers/electronStores'
-import {
-  getGameInfo,
-  getProgress,
-  install,
-  launch,
-  sendKill
-} from 'frontend/helpers'
-import { updateGame } from 'frontend/helpers/library'
+import { getGameInfo, getProgress, sendKill } from 'frontend/helpers'
+import { install, launch, updateGame } from 'frontend/helpers/library'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import { hasStatus } from 'frontend/hooks/hasStatus'
 import PlayIcon from 'frontend/assets/play-icon.svg?react'
