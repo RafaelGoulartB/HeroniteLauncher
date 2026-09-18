@@ -22,7 +22,8 @@ Steam app IDs. Sequels with different numbers are kept apart.
 Grid previews are generated as quality-60 JPEGs at 320×180, cached under
 `local_library/screenshot-thumbnails`, limited to two concurrent jobs, and
 requested only when they approach the visible area. The full-resolution file
-is loaded only after opening a screenshot. The cache defaults to 500 MB,
+is loaded only after opening a screenshot. The fullscreen viewer can move an
+original to the system trash after confirmation. The cache defaults to 500 MB,
 evicts least-recently-used previews, removes entries whose originals no longer
 exist, and can be resized or cleared from Collection settings. The gallery
 renders 50 screenshots initially and adds subsequent batches on request.

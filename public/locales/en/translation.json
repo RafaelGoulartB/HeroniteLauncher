@@ -298,6 +298,9 @@
         "focus": {
             "notes": "Notes",
             "screenshots": "Screenshots",
+            "screenshotsDelete": "Move screenshot to trash",
+            "screenshotsDeleteConfirm": "Move “{{name}}” to the trash?",
+            "screenshotsDeleteError": "Could not delete the screenshot: {{error}}",
             "screenshotsFit": "Fit to screen",
             "screenshotsFitExit": "Exit fit to screen",
             "screenshotsLoadMore_one": "Load more ({{count}} remaining)",

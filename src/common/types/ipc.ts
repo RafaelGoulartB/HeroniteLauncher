@@ -76,6 +76,7 @@ import type {
   CollectionBackupResult,
   CollectionSettings,
   CollectionScreenshotCacheInfo,
+  CollectionScreenshotDeleteResult,
   CollectionScreenshotCaptureResult,
   CollectionScreenshotCaptureStatus,
   CollectionScreenshotSaved,
@@ -344,6 +345,9 @@ interface AsyncIPCFunctions {
     steamAppId?: string
     aliases?: string[]
   }) => Promise<CollectionScreenshotsResult>
+  deleteCollectionScreenshot: (args: {
+    url: string
+  }) => Promise<CollectionScreenshotDeleteResult>
   setCollectionBackupSettings: (args: {
     folder: string
     interval: CollectionBackupInterval

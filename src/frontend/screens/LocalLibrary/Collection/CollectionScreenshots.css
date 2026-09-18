@@ -218,6 +218,15 @@
   background: rgba(16, 18, 22, 0.92);
 }
 
+.collectionScreenshots__tools .collectionScreenshots__delete:hover {
+  background: rgba(190, 45, 45, 0.9);
+}
+
+.collectionScreenshots__tools .collectionFocus__iconBtn:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .collectionScreenshots__nav.is-prev {
   left: 1.2rem;
 }

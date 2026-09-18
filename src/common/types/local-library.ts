@@ -615,6 +615,10 @@ export interface CollectionScreenshotsResult {
   items: CollectionScreenshot[]
 }
 
+export type CollectionScreenshotDeleteResult =
+  | { ok: true }
+  | { ok: false; error: string }
+
 export interface CollectionScreenshotsSettings {
   folder: string
   cacheLimitMb: number

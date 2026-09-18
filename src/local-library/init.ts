@@ -72,7 +72,10 @@ import {
   scanRomsPreview,
   setEmulatorLaunchRom
 } from './emulation'
-import { getCollectionScreenshots } from './screenshots'
+import {
+  deleteCollectionScreenshot,
+  getCollectionScreenshots
+} from './screenshots'
 import {
   captureActiveGameScreenshot,
   configureScreenshotCaptureHotkey,
@@ -158,6 +161,9 @@ export function registerLocalLibraryIpc() {
   )
   addHandler('getCollectionScreenshots', (_e, args) =>
     getCollectionScreenshots(args)
+  )
+  addHandler('deleteCollectionScreenshot', (_e, args) =>
+    deleteCollectionScreenshot(args)
   )
   addHandler('getCollectionScreenshotCaptureStatus', () =>
     getScreenshotCaptureStatus()

@@ -49,6 +49,31 @@ async function showScreenshotNotification(title: string, body: string) {
   }
 }
 
+function showScreenshotOsd(message: string, value: string) {
+  if (!isHyprlandSession()) return Promise.resolve(false)
+  return new Promise<boolean>((resolve) => {
+    execFile(
+      'omarchy-shell',
+      [
+        'osd',
+        'show',
+        JSON.stringify({ icon: '', message, value, duration: 2_000 })
+      ],
+      { timeout: 2_000 },
+      (error) => resolve(!error)
+    )
+  })
+}
+
+async function showScreenshotSavedFeedback(game: ActiveGame, path: string) {
+  const title = t('notify.screenshot.savedTitle')
+  if (await showScreenshotOsd(title, game.title)) return
+  await showScreenshotNotification(
+    title,
+    t('notify.screenshot.savedBody', { game: game.title, path })
+  )
+}
+
 function notifyRegistrationFailure(error: string) {
   if (!currentGame() || error === lastNotifiedRegistrationError) return
   lastNotifiedRegistrationError = error
@@ -326,13 +351,7 @@ export async function captureActiveGameScreenshot(): Promise<CollectionScreensho
       path: target
     })
     logInfo(`Collection screenshot saved to ${target}`, LogPrefix.Backend)
-    await showScreenshotNotification(
-      t('notify.screenshot.savedTitle'),
-      t('notify.screenshot.savedBody', {
-        game: game.title,
-        path: target
-      })
-    )
+    await showScreenshotSavedFeedback(game, target)
     return { ok: true, path: target }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

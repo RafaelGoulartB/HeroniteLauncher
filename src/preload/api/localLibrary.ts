@@ -29,6 +29,7 @@ export const localLibrary = {
   getScreenshotCacheInfo: makeHandlerInvoker('getCollectionScreenshotCacheInfo'),
   clearScreenshotCache: makeHandlerInvoker('clearCollectionScreenshotCache'),
   getScreenshots: makeHandlerInvoker('getCollectionScreenshots'),
+  deleteScreenshot: makeHandlerInvoker('deleteCollectionScreenshot'),
   getScreenshotCaptureStatus: makeHandlerInvoker('getCollectionScreenshotCaptureStatus'),
   captureScreenshot: makeHandlerInvoker('captureCollectionScreenshot'),
   onScreenshotSaved: frontendListenerSlot('collectionScreenshotSaved'),

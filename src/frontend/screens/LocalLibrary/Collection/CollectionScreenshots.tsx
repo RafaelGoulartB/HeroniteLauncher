@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Close,
+  DeleteOutline,
   Fullscreen,
   FullscreenExit
 } from '@mui/icons-material'
@@ -93,6 +94,7 @@ export default function CollectionScreenshots({
   const [zoom, setZoom] = useState(MIN_ZOOM)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [fitScreen, setFitScreen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const viewRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef(MIN_ZOOM)
   const panRef = useRef({ x: 0, y: 0 })
@@ -178,6 +180,7 @@ export default function CollectionScreenshots({
   useEffect(() => {
     if (!galleryOpen && viewIndex === null) return
     const onKeyDown = (event: KeyboardEvent) => {
+      if (deleting) return
       if (event.key === 'Escape') {
         event.stopImmediatePropagation()
         if (viewIndex !== null && zoomRef.current > MIN_ZOOM) {
@@ -224,7 +227,7 @@ export default function CollectionScreenshots({
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [galleryOpen, viewIndex, items.length, fitScreen])
+  }, [deleting, galleryOpen, viewIndex, items.length, fitScreen])
 
   useEffect(() => {
     if (viewIndex === null) return
@@ -272,6 +275,56 @@ export default function CollectionScreenshots({
   function step(delta: number) {
     if (viewIndex === null || !items.length) return
     setViewIndex((viewIndex + delta + items.length) % items.length)
+  }
+
+  async function deleteViewingScreenshot() {
+    if (viewIndex === null || !viewing || deleting) return
+    const confirmed = window.confirm(
+      t(
+        'collection.focus.screenshotsDeleteConfirm',
+        'Move “{{name}}” to the trash?',
+        { name: viewing.name }
+      )
+    )
+    if (!confirmed) return
+
+    setDeleting(true)
+    try {
+      const result = await window.api.localLibrary.deleteScreenshot({
+        url: viewing.url
+      })
+      if (!result.ok) {
+        window.alert(
+          t(
+            'collection.focus.screenshotsDeleteError',
+            'Could not delete the screenshot: {{error}}',
+            { error: result.error }
+          )
+        )
+        return
+      }
+
+      const nextItems = items.filter((_, index) => index !== viewIndex)
+      resetViewTransform()
+      setFitScreen(false)
+      setItems(nextItems)
+      if (!nextItems.length) {
+        setViewIndex(null)
+        setGalleryOpen(false)
+      } else {
+        setViewIndex(Math.min(viewIndex, nextItems.length - 1))
+      }
+    } catch (error) {
+      window.alert(
+        t(
+          'collection.focus.screenshotsDeleteError',
+          'Could not delete the screenshot: {{error}}',
+          { error: String(error) }
+        )
+      )
+    } finally {
+      setDeleting(false)
+    }
   }
 
   function onImagePointerDown(event: ReactPointerEvent<HTMLImageElement>) {
@@ -433,6 +486,21 @@ export default function CollectionScreenshots({
               role="presentation"
             >
               <div className="collectionScreenshots__tools">
+                <button
+                  type="button"
+                  className="collectionFocus__iconBtn collectionScreenshots__delete"
+                  disabled={deleting}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    void deleteViewingScreenshot()
+                  }}
+                  title={t(
+                    'collection.focus.screenshotsDelete',
+                    'Move screenshot to trash'
+                  )}
+                >
+                  <DeleteOutline />
+                </button>
                 <button
                   type="button"
                   className="collectionFocus__iconBtn"

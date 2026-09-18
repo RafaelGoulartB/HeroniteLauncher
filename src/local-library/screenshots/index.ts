@@ -1,8 +1,14 @@
 import { existsSync, readdirSync, statSync } from 'graceful-fs'
-import { basename, extname, join, relative, sep } from 'path'
-import type { CollectionScreenshotsResult } from 'common/types/local-library'
-import { localArtUrl, screenshotsRoot } from '../protocol'
+import { realpath } from 'fs/promises'
+import { basename, extname, isAbsolute, join, relative, sep } from 'path'
+import { shell } from 'electron'
+import type {
+  CollectionScreenshotDeleteResult,
+  CollectionScreenshotsResult
+} from 'common/types/local-library'
+import { localArtFilePath, localArtUrl, screenshotsRoot } from '../protocol'
 import { pickScreenshotFolder } from './match'
+import { maintainScreenshotThumbnailCache } from './thumbnails'
 
 const IMAGE_EXT = new Set([
   '.png',
@@ -138,5 +144,41 @@ export function getCollectionScreenshots(args: {
     folder: root,
     matchedFolder: match.folder,
     items
+  }
+}
+
+export async function deleteCollectionScreenshot(args: {
+  url: string
+}): Promise<CollectionScreenshotDeleteResult> {
+  try {
+    const parsed = new URL(args.url)
+    if (parsed.protocol !== 'localart:' || parsed.hostname !== 'screenshots') {
+      return { ok: false, error: 'Invalid screenshot path.' }
+    }
+
+    const filePath = localArtFilePath(args.url)
+    const root = screenshotsRoot()
+    if (!filePath || !root) {
+      return { ok: false, error: 'Screenshot not found.' }
+    }
+
+    const [realRoot, realFilePath] = await Promise.all([
+      realpath(root),
+      realpath(filePath)
+    ])
+    const pathWithinRoot = relative(realRoot, realFilePath)
+    if (
+      pathWithinRoot === '..' ||
+      pathWithinRoot.startsWith(`..${sep}`) ||
+      isAbsolute(pathWithinRoot)
+    ) {
+      return { ok: false, error: 'Invalid screenshot path.' }
+    }
+
+    await shell.trashItem(realFilePath)
+    await maintainScreenshotThumbnailCache()
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, error: String(error) }
   }
 }
