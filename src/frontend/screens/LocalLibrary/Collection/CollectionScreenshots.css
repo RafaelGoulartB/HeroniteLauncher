@@ -195,6 +195,7 @@
   z-index: 2;
   display: flex;
   gap: 8px;
+  transition: opacity 0.2s ease;
 }
 
 .collectionScreenshots__nav {
@@ -211,6 +212,9 @@
   color: #f4f6f8;
   cursor: pointer;
   transform: translateY(-50%);
+  transition:
+    opacity 0.2s ease,
+    background 0.2s ease;
 }
 
 .collectionScreenshots__nav:hover,
@@ -245,4 +249,19 @@
   color: rgba(255, 255, 255, 0.78);
   font-size: 0.85rem;
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.2s ease;
+}
+
+.collectionScreenshots__overlay--view.is-fit.is-controls-hidden {
+  cursor: none;
+}
+
+.collectionScreenshots__overlay--view.is-fit.is-controls-hidden
+  .collectionScreenshots__tools,
+.collectionScreenshots__overlay--view.is-fit.is-controls-hidden
+  .collectionScreenshots__nav,
+.collectionScreenshots__overlay--view.is-fit.is-controls-hidden
+  .collectionScreenshots__caption {
+  opacity: 0;
+  pointer-events: none;
 }

@@ -28,6 +28,7 @@ const GALLERY_PAGE_SIZE = 50
 const MIN_ZOOM = 1
 const MAX_ZOOM = 5
 const ZOOM_STEP = 1.12
+const POINTER_STOP_DELAY_MS = 500
 
 function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value))
@@ -94,8 +95,10 @@ export default function CollectionScreenshots({
   const [zoom, setZoom] = useState(MIN_ZOOM)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [fitScreen, setFitScreen] = useState(false)
+  const [viewControlsVisible, setViewControlsVisible] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const viewRef = useRef<HTMLDivElement>(null)
+  const controlsTimerRef = useRef<number | null>(null)
   const zoomRef = useRef(MIN_ZOOM)
   const panRef = useRef({ x: 0, y: 0 })
   const dragRef = useRef<{
@@ -158,16 +161,16 @@ export default function CollectionScreenshots({
   const remaining = items.length - visible.length
   const galleryItems = items.slice(0, galleryVisibleCount)
 
-  function resetViewTransform() {
+  const resetViewTransform = useCallback(() => {
     zoomRef.current = MIN_ZOOM
     panRef.current = { x: 0, y: 0 }
     setZoom(MIN_ZOOM)
     setPan({ x: 0, y: 0 })
-  }
+  }, [])
 
   useEffect(() => {
     resetViewTransform()
-  }, [viewIndex])
+  }, [resetViewTransform, viewIndex])
 
   useEffect(() => {
     zoomRef.current = zoom
@@ -176,6 +179,37 @@ export default function CollectionScreenshots({
   useEffect(() => {
     panRef.current = pan
   }, [pan])
+
+  const clearControlsTimer = useCallback(() => {
+    if (controlsTimerRef.current === null) return
+    window.clearTimeout(controlsTimerRef.current)
+    controlsTimerRef.current = null
+  }, [])
+
+  const revealViewControls = useCallback(() => {
+    clearControlsTimer()
+    setViewControlsVisible(true)
+    if (!fitScreen || viewIndex === null) return
+    controlsTimerRef.current = window.setTimeout(() => {
+      setViewControlsVisible(false)
+      controlsTimerRef.current = null
+    }, POINTER_STOP_DELAY_MS)
+  }, [clearControlsTimer, fitScreen, viewIndex])
+
+  useEffect(() => {
+    clearControlsTimer()
+    if (!fitScreen || viewIndex === null) setViewControlsVisible(true)
+    return clearControlsTimer
+  }, [clearControlsTimer, fitScreen, viewIndex])
+
+  const toggleFitScreen = useCallback(() => {
+    resetViewTransform()
+    clearControlsTimer()
+    setFitScreen((current) => {
+      setViewControlsVisible(current)
+      return !current
+    })
+  }, [clearControlsTimer, resetViewTransform])
 
   useEffect(() => {
     if (!galleryOpen && viewIndex === null) return
@@ -216,8 +250,7 @@ export default function CollectionScreenshots({
       }
       if (event.key === 'ArrowUp') {
         event.preventDefault()
-        resetViewTransform()
-        setFitScreen((current) => !current)
+        toggleFitScreen()
       }
       if (event.key === 'ArrowDown') {
         event.preventDefault()
@@ -227,7 +260,15 @@ export default function CollectionScreenshots({
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [deleting, galleryOpen, viewIndex, items.length, fitScreen])
+  }, [
+    deleting,
+    galleryOpen,
+    viewIndex,
+    items.length,
+    fitScreen,
+    resetViewTransform,
+    toggleFitScreen
+  ])
 
   useEffect(() => {
     if (viewIndex === null) return
@@ -328,6 +369,7 @@ export default function CollectionScreenshots({
   }
 
   function onImagePointerDown(event: ReactPointerEvent<HTMLImageElement>) {
+    revealViewControls()
     if (zoom <= MIN_ZOOM) return
     event.preventDefault()
     event.stopPropagation()
@@ -477,12 +519,24 @@ export default function CollectionScreenshots({
           {viewing && viewIndex !== null && (
             <div
               ref={viewRef}
-              className={
-                fitScreen
-                  ? 'collectionScreenshots__overlay collectionScreenshots__overlay--view is-fit'
-                  : 'collectionScreenshots__overlay collectionScreenshots__overlay--view'
-              }
-              onClick={closeView}
+              className={[
+                'collectionScreenshots__overlay',
+                'collectionScreenshots__overlay--view',
+                fitScreen ? 'is-fit' : '',
+                fitScreen && !viewControlsVisible ? 'is-controls-hidden' : ''
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onPointerMove={revealViewControls}
+              onPointerDown={revealViewControls}
+              onClick={(event) => {
+                if (fitScreen && !viewControlsVisible) {
+                  event.stopPropagation()
+                  revealViewControls()
+                  return
+                }
+                closeView()
+              }}
               role="presentation"
             >
               <div className="collectionScreenshots__tools">
@@ -506,8 +560,7 @@ export default function CollectionScreenshots({
                   className="collectionFocus__iconBtn"
                   onClick={(event) => {
                     event.stopPropagation()
-                    resetViewTransform()
-                    setFitScreen((current) => !current)
+                    toggleFitScreen()
                   }}
                   title={
                     fitScreen
