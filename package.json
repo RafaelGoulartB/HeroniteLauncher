@@ -72,7 +72,8 @@
     "sharp": "^0.35.4",
     "shlex": "^2.1.2",
     "short-uuid": "^4.2.2",
-    "simple-keyboard": "^3.8.53"
+    "simple-keyboard": "^3.8.53",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@emotion/styled": "^11.14.1",

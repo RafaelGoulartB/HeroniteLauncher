@@ -76,6 +76,9 @@ import type {
   CollectionBackupResult,
   CollectionSettings,
   CollectionScreenshotCacheInfo,
+  CollectionScreenshotCaptureResult,
+  CollectionScreenshotCaptureStatus,
+  CollectionScreenshotSaved,
   CollectionScreenshotsResult,
   LudusaviBackupResult,
   LudusaviSettings,
@@ -329,7 +332,11 @@ interface AsyncIPCFunctions {
   setCollectionScreenshotsSettings: (args: {
     folder: string
     cacheLimitMb: number
+    captureEnabled: boolean
+    captureAccelerator: string
   }) => Promise<CollectionSettings>
+  getCollectionScreenshotCaptureStatus: () => Promise<CollectionScreenshotCaptureStatus>
+  captureCollectionScreenshot: () => Promise<CollectionScreenshotCaptureResult>
   getCollectionScreenshotCacheInfo: () => Promise<CollectionScreenshotCacheInfo>
   clearCollectionScreenshotCache: () => Promise<CollectionScreenshotCacheInfo>
   getCollectionScreenshots: (args: {
@@ -614,6 +621,7 @@ interface FrontendMessages {
   collectionMetadataBulkProgress: (
     progress: CollectionMetadataBulkProgress
   ) => void
+  collectionScreenshotSaved: (screenshot: CollectionScreenshotSaved) => void
 
   // Used inside tests, so we can be a bit lenient with the type checking here
   message: (...params: unknown[]) => void

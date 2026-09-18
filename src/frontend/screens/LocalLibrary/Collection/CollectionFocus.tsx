@@ -585,6 +585,8 @@ function CollectionFocusPanel({
         <div className="collectionFocus__body">
           <div className="collectionFocus__main">
             <CollectionScreenshots
+              appName={appName}
+              runner={runner}
               title={title}
               steamAppId={storeAppId}
               aliases={[gameInfo.title, gameInfo.folder_name].filter(

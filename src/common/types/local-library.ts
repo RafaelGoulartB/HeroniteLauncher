@@ -618,6 +618,37 @@ export interface CollectionScreenshotsResult {
 export interface CollectionScreenshotsSettings {
   folder: string
   cacheLimitMb: number
+  captureEnabled: boolean
+  captureAccelerator: string
+}
+
+export interface CollectionScreenshotCaptureStatus {
+  registered: boolean
+  accelerator: string
+  activeGame?: {
+    appName: string
+    runner: 'sideload' | 'legendary' | 'gog' | 'nile' | 'zoom'
+    title: string
+  }
+  error?: string
+}
+
+export interface CollectionScreenshotCaptureResult {
+  ok: boolean
+  path?: string
+  error?: string
+  skippedReason?:
+    | 'disabled'
+    | 'no-active-game'
+    | 'folder-not-configured'
+    | 'capture-unavailable'
+    | 'busy'
+}
+
+export interface CollectionScreenshotSaved {
+  appName: string
+  runner: 'sideload' | 'legendary' | 'gog' | 'nile' | 'zoom'
+  path: string
 }
 
 export interface CollectionScreenshotCacheInfo {

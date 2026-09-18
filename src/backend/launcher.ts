@@ -233,6 +233,22 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     skipVersionCheck
   )
 
+  const screenshotCapture = await import('local-library').catch((error) => {
+    logError(
+      ['Collection screenshot service could not start:', error],
+      LogPrefix.Backend
+    )
+    return null
+  })
+  try {
+    screenshotCapture?.beginScreenshotCaptureSession({ appName, runner, title })
+  } catch (error) {
+    logError(
+      ['Collection screenshot session could not start:', error],
+      LogPrefix.Backend
+    )
+  }
+
   if (runner === 'gog') {
     gogPresence.setCurrentGame(appName)
     await gogPresence.setPresence()
@@ -249,6 +265,14 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
       return false
     })
     .finally(async () => {
+      try {
+        screenshotCapture?.endScreenshotCaptureSession({ appName, runner })
+      } catch (error) {
+        logError(
+          ['Collection screenshot session could not stop:', error],
+          LogPrefix.Backend
+        )
+      }
       await runAfterLaunchScript(gameInfo, gameSettings, logWriter)
       await logWriter.close()
     })

@@ -12,6 +12,8 @@ OLD_PREFIX="$HOME/.local/opt/HeroicLocal"
 BIN_DIR="$HOME/.local/bin"
 APP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 ICON_BASE="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+DESKTOP_ID="com.heronite.launcher"
+DESKTOP_FILE="$DESKTOP_ID.desktop"
 
 if pgrep -f "$PREFIX/" >/dev/null 2>&1 || pgrep -f "$OLD_PREFIX/" >/dev/null 2>&1; then
   echo "Close Heronite before installing (it is running)." >&2
@@ -57,6 +59,16 @@ if [[ -z "$EXE" ]]; then
   exit 1
 fi
 
+# electron-builder automatically unpacks sharp's native addon, but its libvips
+# dependency also has to live outside app.asar so the dynamic loader can see it.
+# Fail before replacing a working installation if packaging regresses again.
+SHARP_UNPACKED="$UNPACKED/resources/app.asar.unpacked/node_modules/@img"
+if [[ -d node_modules/@img/sharp-libvips-linux-x64 ]] &&
+  ! compgen -G "$SHARP_UNPACKED/sharp-libvips-linux-x64/lib/libvips-cpp.so.*" >/dev/null; then
+  echo "Packaged app is missing sharp's unpacked libvips runtime" >&2
+  exit 1
+fi
+
 mkdir -p "$(dirname "$PREFIX")" "$BIN_DIR" "$APP_DIR"
 rm -rf "$PREFIX"
 if [[ "$OLD_PREFIX" != "$PREFIX" ]]; then
@@ -73,7 +85,7 @@ if [[ -L "$BIN_DIR/heroic" ]]; then
     rm -f "$BIN_DIR/heroic"
   fi
 fi
-rm -f "$APP_DIR/heroic.desktop" "$APP_DIR/heroic-local.desktop"
+rm -f "$APP_DIR/heroic.desktop" "$APP_DIR/heroic-local.desktop" "$APP_DIR/heronite.desktop"
 
 if [[ -f "$ICON_SRC" ]]; then
   for size in 128 256 512 1024; do
@@ -84,14 +96,14 @@ if [[ -f "$ICON_SRC" ]]; then
   done
 fi
 
-cat > "$APP_DIR/heronite.desktop" <<EOF
+cat > "$APP_DIR/$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Name=Heronite
-Exec=$PREFIX/$EXE --class=Heronite %U
+Exec=env HEROIC_DESKTOP_NAME=$DESKTOP_FILE $PREFIX/$EXE %U
 Terminal=false
 Type=Application
 Icon=heronite
-StartupWMClass=Heronite
+StartupWMClass=$DESKTOP_ID
 Comment=Personal Heroic fork with Playnite Collection
 Categories=Game;
 EOF

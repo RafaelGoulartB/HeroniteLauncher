@@ -8,6 +8,11 @@ export {
 export { recordLocalSession } from './sessions'
 export { backupLudusaviAfterPlay } from './ludusavi'
 export {
+  beginScreenshotCaptureSession,
+  endScreenshotCaptureSession,
+  prepareScreenshotCaptureService
+} from './screenshots/capture'
+export {
   isSteamUriGame,
   isSteamClientAvailable,
   isSteamAppInstalled,

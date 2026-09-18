@@ -1,10 +1,11 @@
-import type { SyntheticEvent } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type {
   CollectionBackupInterval,
   CollectionMetadataSettings,
   CollectionScreenshotCacheInfo,
+  CollectionScreenshotCaptureStatus,
   CollectionSettings,
   CoverAspectPreset,
   LudusaviBackupFormat,
@@ -64,6 +65,28 @@ function formatCacheSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function acceleratorFromKey(event: ReactKeyboardEvent<HTMLInputElement>) {
+  if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) return null
+  const namedKeys: Record<string, string> = {
+    ' ': 'Space',
+    ArrowUp: 'Up',
+    ArrowDown: 'Down',
+    ArrowLeft: 'Left',
+    ArrowRight: 'Right',
+    Escape: 'Esc',
+    PrintScreen: 'PrintScreen'
+  }
+  const key =
+    namedKeys[event.key] ??
+    (event.key.length === 1 ? event.key.toUpperCase() : event.key)
+  const modifiers = [
+    event.ctrlKey || event.metaKey ? 'CommandOrControl' : '',
+    event.altKey ? 'Alt' : '',
+    event.shiftKey ? 'Shift' : ''
+  ].filter(Boolean)
+  return [...modifiers, key].join('+')
+}
+
 const FIELD_LABELS: Record<MetadataField, string> = {
   description: 'Description',
   releaseDate: 'Release date',
@@ -98,6 +121,11 @@ export default function CollectionSettingsDialog({
     useState<CollectionScreenshotCacheInfo | null>(null)
   const [screenshotCacheBusy, setScreenshotCacheBusy] = useState(false)
   const [screenshotCacheMessage, setScreenshotCacheMessage] = useState('')
+  const [screenshotCaptureEnabled, setScreenshotCaptureEnabled] =
+    useState(false)
+  const [screenshotAccelerator, setScreenshotAccelerator] = useState('F10')
+  const [screenshotCaptureStatus, setScreenshotCaptureStatus] =
+    useState<CollectionScreenshotCaptureStatus | null>(null)
   const [ludusaviEnabled, setLudusaviEnabled] = useState(false)
   const [useInstalledConfig, setUseInstalledConfig] = useState(true)
   const [ludusaviBinary, setLudusaviBinary] = useState('')
@@ -119,12 +147,14 @@ export default function CollectionSettingsDialog({
   const [igdbTest, setIgdbTest] = useState('')
 
   async function reload() {
-    const [next, cacheInfo] = await Promise.all([
+    const [next, cacheInfo, captureStatus] = await Promise.all([
       window.api.localLibrary.getSettings(),
-      window.api.localLibrary.getScreenshotCacheInfo()
+      window.api.localLibrary.getScreenshotCacheInfo(),
+      window.api.localLibrary.getScreenshotCaptureStatus()
     ])
     setSettings(next)
     setScreenshotCacheInfo(cacheInfo)
+    setScreenshotCaptureStatus(captureStatus)
     setFolder(next.backup.folder)
     setInterval(next.backup.interval)
     setLudusaviEnabled(next.ludusavi.enabled)
@@ -136,6 +166,8 @@ export default function CollectionSettingsDialog({
     setGreyUninstalledGames(next.greyUninstalledGames !== false)
     setScreenshotsFolder(next.screenshots?.folder ?? '')
     setScreenshotCacheLimit(String(next.screenshots.cacheLimitMb))
+    setScreenshotCaptureEnabled(next.screenshots.captureEnabled)
+    setScreenshotAccelerator(next.screenshots.captureAccelerator)
     setIgdbClientId(next.metadata.igdbClientId)
     setIgdbClientSecret(next.metadata.igdbClientSecret)
     setCoverAspect(next.metadata.coverAspect)
@@ -167,7 +199,9 @@ export default function CollectionSettingsDialog({
 
   async function persistScreenshots(
     nextFolder = screenshotsFolder,
-    nextCacheLimit = Number(screenshotCacheLimit)
+    nextCacheLimit = Number(screenshotCacheLimit),
+    nextCaptureEnabled = screenshotCaptureEnabled,
+    nextAccelerator = screenshotAccelerator
   ) {
     setSaving(true)
     setError('')
@@ -175,13 +209,20 @@ export default function CollectionSettingsDialog({
     try {
       const next = await window.api.localLibrary.setScreenshotsSettings({
         folder: nextFolder,
-        cacheLimitMb: nextCacheLimit
+        cacheLimitMb: nextCacheLimit,
+        captureEnabled: nextCaptureEnabled,
+        captureAccelerator: nextAccelerator
       })
       setSettings(next)
       setScreenshotsFolder(next.screenshots.folder)
       setScreenshotCacheLimit(String(next.screenshots.cacheLimitMb))
+      setScreenshotCaptureEnabled(next.screenshots.captureEnabled)
+      setScreenshotAccelerator(next.screenshots.captureAccelerator)
       setScreenshotCacheInfo(
         await window.api.localLibrary.getScreenshotCacheInfo()
+      )
+      setScreenshotCaptureStatus(
+        await window.api.localLibrary.getScreenshotCaptureStatus()
       )
       onSettingsChange?.(next)
     } catch (err) {
@@ -461,6 +502,79 @@ export default function CollectionSettingsDialog({
                 'Screenshots folder'
               )}
             />
+            <ToggleSwitch
+              htmlId="collection-screenshot-capture-enabled"
+              disabled={saving}
+              value={screenshotCaptureEnabled}
+              handleChange={() => {
+                const next = !screenshotCaptureEnabled
+                setScreenshotCaptureEnabled(next)
+                void persistScreenshots(
+                  screenshotsFolder,
+                  Number(screenshotCacheLimit),
+                  next
+                )
+              }}
+              title={t(
+                'collection.settings.screenshotCaptureEnabled',
+                'Capture screenshots while a game is running'
+              )}
+            />
+            <TextInputField
+              htmlId="collection-screenshot-hotkey"
+              extraClass="CollectionSettingsDialog__captureHotkey"
+              value={screenshotAccelerator}
+              readOnly
+              disabled={saving}
+              onChange={() => {}}
+              onKeyDown={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                const next = acceleratorFromKey(event)
+                if (!next) return
+                setScreenshotAccelerator(next)
+                void persistScreenshots(
+                  screenshotsFolder,
+                  Number(screenshotCacheLimit),
+                  screenshotCaptureEnabled,
+                  next
+                )
+              }}
+              label={t(
+                'collection.settings.screenshotCaptureHotkey',
+                'Screenshot shortcut'
+              )}
+            />
+            <p className="CollectionSettingsDialog__meta">
+              {t(
+                'collection.settings.screenshotCaptureHelp',
+                'Click the shortcut field and press the desired key combination. Captures are saved in the matched game folder and appear automatically in Collection.'
+              )}
+            </p>
+            {screenshotCaptureEnabled &&
+              screenshotCaptureStatus?.registered && (
+                <p className="CollectionSettingsDialog__ok">
+                  {t(
+                    'collection.settings.screenshotCaptureReady',
+                    'Shortcut registered and ready.'
+                  )}
+                </p>
+              )}
+            {screenshotCaptureEnabled &&
+              !screenshotCaptureStatus?.registered &&
+              !screenshotCaptureStatus?.error && (
+                <p className="CollectionSettingsDialog__meta">
+                  {t(
+                    'collection.settings.screenshotCaptureWaiting',
+                    'The shortcut activates automatically when a game starts.'
+                  )}
+                </p>
+              )}
+            {screenshotCaptureEnabled && screenshotCaptureStatus?.error && (
+              <p className="CollectionSettingsDialog__error">
+                {screenshotCaptureStatus.error}
+              </p>
+            )}
             <TextInputField
               htmlId="collection-screenshot-cache-limit"
               extraClass="CollectionSettingsDialog__cacheLimit"

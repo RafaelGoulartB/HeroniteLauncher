@@ -16,6 +16,10 @@ asarUnpack:
   - build/bin/**/*
   - '!build/bin/legendary.LICENSE'
   - build/preload/webviewPreload.js
+  # sharp's native addon loads libvips with dlopen. Shared libraries cannot be
+  # loaded from inside app.asar, so keep every platform-specific @img package
+  # beside the automatically unpacked .node binary.
+  - node_modules/@img/sharp-*/**/*
 
 protocols:
   - name: heroic

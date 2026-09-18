@@ -76,6 +76,9 @@ importers:
       simple-keyboard:
         specifier: ^3.8.53
         version: 3.8.54
+      ws:
+        specifier: ^8.18.3
+        version: 8.18.3
     devDependencies:
       '@emotion/styled':
         specifier: ^11.14.1

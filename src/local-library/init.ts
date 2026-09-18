@@ -74,6 +74,12 @@ import {
 } from './emulation'
 import { getCollectionScreenshots } from './screenshots'
 import {
+  captureActiveGameScreenshot,
+  configureScreenshotCaptureHotkey,
+  getScreenshotCaptureStatus,
+  initScreenshotCaptureService
+} from './screenshots/capture'
+import {
   clearScreenshotThumbnailCache,
   maintainScreenshotThumbnailCache
 } from './screenshots/thumbnails'
@@ -139,6 +145,7 @@ export function registerLocalLibraryIpc() {
   })
   addHandler('setCollectionScreenshotsSettings', async (_e, args) => {
     const settings = setCollectionScreenshotsSettings(args)
+    configureScreenshotCaptureHotkey()
     await maintainScreenshotThumbnailCache()
     const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
     return { ...settings, ludusaviDetected }
@@ -152,6 +159,10 @@ export function registerLocalLibraryIpc() {
   addHandler('getCollectionScreenshots', (_e, args) =>
     getCollectionScreenshots(args)
   )
+  addHandler('getCollectionScreenshotCaptureStatus', () =>
+    getScreenshotCaptureStatus()
+  )
+  addHandler('captureCollectionScreenshot', () => captureActiveGameScreenshot())
   addHandler('setCollectionBackupSettings', async (_e, args) => {
     const settings = setCollectionBackupSettings(args)
     const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
@@ -213,6 +224,7 @@ export function registerLocalLibraryIpc() {
 export async function initLocalLibrary() {
   registerLocalLibraryIpc()
   initLocalArtProtocol()
+  initScreenshotCaptureService()
   logInfo(
     'Collection overlay: Ludusavi backup handler registered',
     LogPrefix.Backend

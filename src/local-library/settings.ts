@@ -110,7 +110,9 @@ const settingsFile = new Store<SettingsFile>({
     greyUninstalledGames: true,
     screenshots: {
       folder: '',
-      cacheLimitMb: DEFAULT_SCREENSHOT_CACHE_LIMIT_MB
+      cacheLimitMb: DEFAULT_SCREENSHOT_CACHE_LIMIT_MB,
+      captureEnabled: false,
+      captureAccelerator: 'F10'
     },
     metadata: fallbackMetadata()
   }
@@ -145,7 +147,12 @@ function asCompression(value?: string): LudusaviCompression {
 }
 
 function fallbackScreenshots(): CollectionScreenshotsSettings {
-  return { folder: '', cacheLimitMb: DEFAULT_SCREENSHOT_CACHE_LIMIT_MB }
+  return {
+    folder: '',
+    cacheLimitMb: DEFAULT_SCREENSHOT_CACHE_LIMIT_MB,
+    captureEnabled: false,
+    captureAccelerator: 'F10'
+  }
 }
 
 function asScreenshotCacheLimit(value?: number) {
@@ -193,7 +200,15 @@ export function getCollectionSettings(): CollectionSettings {
         ).folder?.trim() ?? '',
       cacheLimitMb: asScreenshotCacheLimit(
         (settingsFile.get('screenshots') ?? fallbackScreenshots()).cacheLimitMb
-      )
+      ),
+      captureEnabled: Boolean(
+        (settingsFile.get('screenshots') ?? fallbackScreenshots())
+          .captureEnabled
+      ),
+      captureAccelerator:
+        (
+          settingsFile.get('screenshots') ?? fallbackScreenshots()
+        ).captureAccelerator?.trim() || 'F10'
     },
     metadata: normalizeMetadata(settingsFile.get('metadata'))
   }
@@ -209,10 +224,14 @@ export function setCollectionUiSettings(args: {
 export function setCollectionScreenshotsSettings(args: {
   folder: string
   cacheLimitMb: number
+  captureEnabled: boolean
+  captureAccelerator: string
 }): CollectionSettings {
   settingsFile.set('screenshots', {
     folder: args.folder.trim(),
-    cacheLimitMb: asScreenshotCacheLimit(args.cacheLimitMb)
+    cacheLimitMb: asScreenshotCacheLimit(args.cacheLimitMb),
+    captureEnabled: args.captureEnabled,
+    captureAccelerator: args.captureAccelerator.trim() || 'F10'
   })
   return getCollectionSettings()
 }

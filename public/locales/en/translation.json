@@ -482,6 +482,11 @@
             "screenshotCacheLimit": "Preview cache limit (MB)",
             "screenshotCacheUsage_one": "{{size}} used by {{count}} previews · {{limit}} limit",
             "screenshotCacheUsage_other": "{{size}} used by {{count}} previews · {{limit}} limit",
+            "screenshotCaptureEnabled": "Capture screenshots while a game is running",
+            "screenshotCaptureHelp": "Click the shortcut field and press the desired key combination. Captures are saved in the matched game folder and appear automatically in Collection.",
+            "screenshotCaptureHotkey": "Screenshot shortcut",
+            "screenshotCaptureReady": "Shortcut registered and ready.",
+            "screenshotCaptureWaiting": "The shortcut activates automatically when a game starts.",
             "screenshotsFolder": "Screenshots folder",
             "screenshotsHeading": "Screenshots",
             "screenshotsHelp": "Folder with a subfolder per game (Xbox Game Bar Captures, NVIDIA, etc.). Collection matches those names to the selected game even when they are not identical.",
@@ -991,6 +996,14 @@
         "new-heroic-version": "A new Heroic version was released!",
         "refresh": {
             "error": "Couldn't fetch releases from upstream, maybe because of Github API restrictions! Try again later."
+        },
+        "screenshot": {
+            "failedBody": "The screen could not be captured: {{error}}",
+            "failedTitle": "Screenshot failed",
+            "savedBody": "{{game}} screenshot saved to {{path}}",
+            "savedTitle": "Screenshot saved",
+            "shortcutFailedBody": "The configured shortcut could not be activated: {{error}}",
+            "shortcutFailedTitle": "Screenshot shortcut unavailable"
         },
         "uninstalled": "Uninstalled",
         "update": {

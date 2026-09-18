@@ -1,5 +1,9 @@
 import { initImagesCache } from './images_cache'
-import { initLocalArtProtocol, registerLocalArtScheme } from 'local-library'
+import {
+  initLocalArtProtocol,
+  prepareScreenshotCaptureService,
+  registerLocalArtScheme
+} from 'local-library'
 import { fetchLastestReleases } from './utils/releases'
 import { DiskSpaceData, StatusPromise, WineInstallation } from 'common/types'
 import * as path from 'path'
@@ -145,6 +149,7 @@ import { supportedLanguages } from 'common/languages'
 import MigrationSystem from './migration'
 
 if (isLinux) app.commandLine?.appendSwitch('--gtk-version', '3')
+prepareScreenshotCaptureService()
 
 async function initializeWindow(): Promise<BrowserWindow> {
   createNecessaryFolders()

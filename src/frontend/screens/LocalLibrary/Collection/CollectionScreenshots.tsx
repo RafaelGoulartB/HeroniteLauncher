@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
@@ -10,9 +10,12 @@ import {
   FullscreenExit
 } from '@mui/icons-material'
 import type { CollectionScreenshot } from 'common/types/local-library'
+import type { Runner } from 'common/types'
 import './CollectionScreenshots.css'
 
 type Props = {
+  appName: string
+  runner: Runner
   title: string
   steamAppId?: string
   aliases?: string[]
@@ -74,6 +77,8 @@ function ScreenshotPreview({ item }: { item: CollectionScreenshot }) {
 }
 
 export default function CollectionScreenshots({
+  appName,
+  runner,
   title,
   steamAppId,
   aliases,
@@ -104,6 +109,22 @@ export default function CollectionScreenshots({
     [aliases]
   )
 
+  const loadScreenshots = useCallback(
+    (cancelled: () => boolean) => {
+      if (!screenshotsFolder || !title) return
+      const extra = aliasKey ? aliasKey.split('\0') : []
+      void window.api.localLibrary
+        .getScreenshots({ title, steamAppId, aliases: extra })
+        .then((result) => {
+          if (!cancelled()) setItems(result.items)
+        })
+        .catch(() => {
+          if (!cancelled()) setItems([])
+        })
+    },
+    [aliasKey, screenshotsFolder, steamAppId, title]
+  )
+
   useEffect(() => {
     let cancelled = false
     setItems([])
@@ -113,20 +134,21 @@ export default function CollectionScreenshots({
     setZoom(MIN_ZOOM)
     setPan({ x: 0, y: 0 })
     setFitScreen(false)
-    if (!screenshotsFolder || !title) return
-    const extra = aliasKey ? aliasKey.split('\0') : []
-    void window.api.localLibrary
-      .getScreenshots({ title, steamAppId, aliases: extra })
-      .then((result) => {
-        if (!cancelled) setItems(result.items)
-      })
-      .catch(() => {
-        if (!cancelled) setItems([])
-      })
+    loadScreenshots(() => cancelled)
     return () => {
       cancelled = true
     }
-  }, [title, steamAppId, aliasKey, screenshotsFolder])
+  }, [loadScreenshots])
+
+  useEffect(
+    () =>
+      window.api.localLibrary.onScreenshotSaved((_event, screenshot) => {
+        if (screenshot.appName !== appName || screenshot.runner !== runner)
+          return
+        loadScreenshots(() => false)
+      }),
+    [appName, loadScreenshots, runner]
+  )
 
   const viewing = viewIndex !== null ? items[viewIndex] : undefined
   const hasMore = items.length > PREVIEW_SLOTS

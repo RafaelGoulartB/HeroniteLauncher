@@ -491,6 +491,14 @@
         "refresh": {
             "error": "Não foi possível buscar lançamentos do upstream, talvez devido às restrições da API do Github! Tente mais tarde."
         },
+        "screenshot": {
+            "failedBody": "Não foi possível capturar a tela: {{error}}",
+            "failedTitle": "Falha ao tirar screenshot",
+            "savedBody": "Screenshot de {{game}} salvo em {{path}}",
+            "savedTitle": "Screenshot salvo",
+            "shortcutFailedBody": "Não foi possível ativar o atalho configurado: {{error}}",
+            "shortcutFailedTitle": "Atalho de screenshot indisponível"
+        },
         "uninstalled": "Desinstalado",
         "update": {
             "canceled": "Atualização cancelada",
