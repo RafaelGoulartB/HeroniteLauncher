@@ -463,6 +463,7 @@ export default function CollectionSettingsDialog({
             />
             <TextInputField
               htmlId="collection-screenshot-cache-limit"
+              extraClass="CollectionSettingsDialog__cacheLimit"
               type="number"
               min={50}
               max={10000}
