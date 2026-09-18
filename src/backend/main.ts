@@ -1,4 +1,5 @@
 import { initImagesCache } from './images_cache'
+import { initLocalArtProtocol, registerLocalArtScheme } from 'local-library'
 import { fetchLastestReleases } from './utils/releases'
 import { DiskSpaceData, StatusPromise, WineInstallation } from 'common/types'
 import * as path from 'path'
@@ -310,6 +311,7 @@ if (!gotTheLock) {
   console.log('Heroic is already running, quitting this instance')
   app.quit()
 } else {
+  registerLocalArtScheme()
   app.on('second-instance', (event, argv) => {
     // Someone tried to run a second instance, we should focus our window.
     const mainWindow = getMainWindow()
@@ -327,6 +329,7 @@ if (!gotTheLock) {
     initOnlineMonitor()
     initStoreManagers()
     initImagesCache()
+    initLocalArtProtocol()
 
     // Add User-Agent Client hints to behave like Windows
     if (process.argv.includes('--spoof-windows')) {

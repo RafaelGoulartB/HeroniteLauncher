@@ -1,0 +1,127 @@
+.CollectionWebImageDialog {
+  width: min(960px, 96vw);
+  max-width: min(960px, 96vw) !important;
+  min-width: min(720px, 92vw);
+}
+
+.CollectionWebImageDialog__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 74vh;
+}
+
+.CollectionWebImageDialog__help {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.CollectionWebImageDialog__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.CollectionWebImageDialog__query {
+  display: flex;
+  flex: 1 1 16rem;
+  min-width: 12rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text-secondary);
+}
+
+.CollectionWebImageDialog__query input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-default);
+  outline: none;
+}
+
+.CollectionWebImageDialog__check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.CollectionWebImageDialog__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  min-height: 18rem;
+  max-height: 46vh;
+  overflow: auto;
+  padding: 0.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.CollectionWebImageDialog__status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.CollectionWebImageDialog__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.4rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.CollectionWebImageDialog__item:hover,
+.CollectionWebImageDialog__item.is-selected {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.CollectionWebImageDialog__item img {
+  display: block;
+  width: 160px;
+  height: 120px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.CollectionWebImageDialog__grid.is-cover .CollectionWebImageDialog__item img {
+  width: 120px;
+  height: 180px;
+}
+
+.CollectionWebImageDialog__grid.is-hero .CollectionWebImageDialog__item img {
+  width: 240px;
+  height: 90px;
+}
+
+.CollectionWebImageDialog__item span {
+  font-size: var(--text-sm);
+}
+
+.CollectionWebImageDialog__more {
+  align-self: center;
+  min-width: 12rem;
+}
+
+.CollectionWebImageDialog__error {
+  margin: 0;
+  color: var(--danger, #e74c3c);
+}

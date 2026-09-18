@@ -35,6 +35,7 @@
             "body": "Please select a launch option for this game (it can be changed later on the game settings):",
             "title": "Select Launch Option ({{seconds}}s)"
         },
+        "show-in-folder": "Show in folder",
         "sideload": {
             "exe": "Select Executable"
         },
@@ -99,6 +100,58 @@
         "update": "Update"
     },
     "cloud_save_unsupported": "Unsupported",
+    "collection": {
+        "focus": {
+            "details": "Details",
+            "features": "Features",
+            "installFolder": "Installation Folder",
+            "library": "Library",
+            "local": "Local",
+            "none": "No game selected",
+            "notes": "Notes",
+            "overview": "Overview",
+            "tags": "Tags"
+        },
+        "gameConfig": {
+            "title": "Game settings"
+        },
+        "ludusavi": {
+            "backup": "Backup save (Ludusavi)",
+            "busy": "Ludusavi is already backing up a save. Wait a moment and try again.",
+            "done": "Saved a Ludusavi backup for {{title}}.",
+            "donePath": "Saved a Ludusavi backup for {{title}} in {{path}}.",
+            "restart": "Restart Heroic Local to load Ludusavi backup.",
+            "running": "Backing up saves with Ludusavi…"
+        },
+        "metadata": {
+            "field": {
+                "criticScore": "Score",
+                "platforms": "Platforms",
+                "series": "Series",
+                "themes": "Themes"
+            },
+            "title": "Collection metadata"
+        },
+        "notPlayed": "Not Played",
+        "remove": {
+            "confirm": "Remove {{title}} from Collection? This does not uninstall the game. Playtime, status, and Collection images for it are deleted.",
+            "failed": "Could not remove this game from Collection.",
+            "restart": "Restart Heroic Local to load Remove from Collection.",
+            "title": "Remove from Collection"
+        },
+        "sort": {
+            "playtime": "Playtime"
+        },
+        "status": {
+            "menu": "Status"
+        },
+        "steam": {
+            "clientMissing": "Steam was not found. Install or launch the Steam client, then try again.",
+            "clientMissingTitle": "Steam not found",
+            "uninstallHelp": "This opens Steam to uninstall \"{{title}}\". The game stays in Collection; Heroic marks it uninstalled after Steam finishes and you refresh or reopen Heroic Local."
+        },
+        "tracking": "Counting playtime"
+    },
     "disabled": "Disabled",
     "edit-game": {
         "advanced": "Advanced",
@@ -146,6 +199,8 @@
         "neverPlayed": "Never",
         "platform": "Select Platform Version to Install",
         "requirements": "System Requirements",
+        "sessionPlaynite": "Playnite",
+        "sessions": "Play sessions",
         "totalPlayed": "Time Played"
     },
     "gamecard": {

@@ -1,0 +1,36 @@
+.collectionDropdown .dropdown {
+  padding: 0.35rem;
+}
+
+.collectionDropdown .dropdown button {
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.collectionDropdown .dropdown button:not(:disabled):hover,
+.collectionDropdown .dropdown button:not(:disabled):focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.collectionDropdown .dropdown .toggleSwitchWrapper {
+  width: 100%;
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--space-3xs);
+  box-sizing: border-box;
+}
+
+.collectionDropdown .dropdown .toggleSwitchWrapper:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.collectionDropdown .dropdown .toggleSwitchWrapper:hover span,
+.collectionDropdown
+  .dropdown
+  .hiddenCheckbox:checked
+  + .toggleSwitchWrapper:hover
+  span {
+  color: #fff;
+}

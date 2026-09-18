@@ -11,7 +11,7 @@ const RunnerToStore = {
   legendary: 'Epic Games',
   gog: 'GOG',
   nile: 'Amazon Games',
-  sideload: 'Other',
+  sideload: 'Local',
   zoom: 'ZOOM Platform'
 }
 
@@ -132,7 +132,7 @@ export default function LibraryFilters() {
   // t('Epic Games', 'Epic Games')
   // t('GOG', 'GOG')
   // t('Amazon Games', 'Amazon Games')
-  // t('Other', 'Other')
+  // t('Local', 'Local')
   const storeToggle = (store: Runner) => {
     const toggle = (
       <ToggleSwitch

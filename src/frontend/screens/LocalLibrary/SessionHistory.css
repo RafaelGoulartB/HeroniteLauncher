@@ -1,0 +1,18 @@
+.sessionHistory {
+  margin-block: var(--space-sm);
+}
+
+.sessionHistory__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  margin-bottom: var(--space-xs);
+}
+
+.sessionHistory__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  max-height: 220px;
+  overflow: auto;
+}

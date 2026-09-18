@@ -3,16 +3,20 @@ import react from '@vitejs/plugin-react-swc'
 import svgr from 'vite-plugin-svgr'
 import path from 'path'
 
-const srcAliases = ['backend', 'frontend', 'common'].map((aliasName) => ({
-  find: aliasName,
-  replacement: path.join(__dirname, 'src', aliasName)
-}))
+const srcAliases = ['backend', 'frontend', 'common', 'local-library'].map(
+  (aliasName) => ({
+    find: aliasName,
+    replacement: path.join(__dirname, 'src', aliasName)
+  })
+)
 
 const dependenciesToNotExternalize = [
   '@xhmikosr/decompress',
   '@xhmikosr/decompress-targz',
   '@xhmikosr/decompress-unzip'
 ]
+
+const optionalNativeDeps = ['ws', 'bufferutil', 'utf-8-validate']
 
 export default defineConfig(({ mode }) => ({
   main: {
@@ -29,7 +33,12 @@ export default defineConfig(({ mode }) => ({
       sourcemap: 'inline'
     },
     resolve: { alias: srcAliases },
-    plugins: [externalizeDepsPlugin({ exclude: dependenciesToNotExternalize })]
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: dependenciesToNotExternalize,
+        include: optionalNativeDeps
+      })
+    ]
   },
   preload: {
     build: {
@@ -48,7 +57,12 @@ export default defineConfig(({ mode }) => ({
       sourcemap: mode === 'development' ? 'inline' : false
     },
     resolve: { alias: srcAliases },
-    plugins: [externalizeDepsPlugin({ exclude: dependenciesToNotExternalize })]
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: dependenciesToNotExternalize,
+        include: optionalNativeDeps
+      })
+    ]
   },
   renderer: {
     root: '.',

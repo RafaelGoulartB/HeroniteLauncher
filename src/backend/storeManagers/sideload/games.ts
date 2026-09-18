@@ -59,16 +59,27 @@ export default class SideloadGame implements Game {
   }
 
   async isGameAvailable(): Promise<boolean> {
+    const { isSteamUriGame, isSteamAppInstalled, getLocalGameMeta } =
+      await import('local-library')
+    if (isSteamUriGame(this.id)) {
+      const steamAppId = getLocalGameMeta(this.id)?.steamAppId
+      return steamAppId ? isSteamAppInstalled(steamAppId) : false
+    }
+
     return new Promise((resolve) => {
       const { install } = this.getGameInfo()
 
       if (install && install.platform === 'Browser') {
         resolve(true)
+        return
       }
 
       if (install && install.executable) {
         resolve(existsSync(install.executable))
+        return
       }
+
+      resolve(false)
     })
   }
 
@@ -77,10 +88,24 @@ export default class SideloadGame implements Game {
     launchArguments?: LaunchOption,
     args: string[] = []
   ): Promise<boolean> {
+    const { tryLaunchLocalGame } = await import('local-library')
+    const localLaunch = await tryLaunchLocalGame(
+      this.getGameInfo(),
+      logWriter,
+      args
+    )
+    if (localLaunch !== null) {
+      return localLaunch
+    }
     return launchGame(this, logWriter, args)
   }
 
   async stop(): Promise<void> {
+    const { tryStopLocalGame } = await import('local-library')
+    if (await tryStopLocalGame(this.id)) {
+      return
+    }
+
     const {
       install: { executable = undefined }
     } = this.getGameInfo()

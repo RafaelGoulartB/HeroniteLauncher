@@ -1,0 +1,28 @@
+.collectionSortMenu {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.collectionSortMenu .dropdown {
+  min-width: 200px;
+  z-index: 20;
+}
+
+.collectionSortMenu .dropdown button.collectionSortMenu__item {
+  margin: 0;
+  width: 100%;
+  align-self: stretch;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  color: var(--text-default);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--space-3xs);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  text-transform: none;
+}
+
+.collectionSortMenu .dropdown button.collectionSortMenu__item.is-active {
+  color: var(--accent);
+}

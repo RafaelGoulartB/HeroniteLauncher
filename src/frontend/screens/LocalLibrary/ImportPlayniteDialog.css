@@ -1,0 +1,33 @@
+.ImportPlayniteDialog {
+  .MuiPaper-root {
+    min-width: min(640px, 90vw);
+  }
+}
+
+.ImportPlayniteDialog__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.ImportPlayniteDialog__drives {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ImportPlayniteDialog__counts {
+  margin: 0;
+  padding-inline-start: var(--space-lg);
+}
+
+.ImportPlayniteDialog__result {
+  color: var(--success);
+}
+
+.ImportPlayniteDialog__error {
+  color: var(--danger, #e44);
+  white-space: pre-wrap;
+}

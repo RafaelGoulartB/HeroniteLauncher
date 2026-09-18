@@ -10,7 +10,8 @@ import {
   faWineGlass,
   faBarsProgress,
   faTv,
-  faTags
+  faTags,
+  faLayerGroup
 } from '@fortawesome/free-solid-svg-icons'
 import { useLocation } from 'react-router-dom'
 import { useContext } from 'react'
@@ -118,8 +119,15 @@ export default function SidebarLinks() {
         />
       )}
       <SidebarItem
-        isActiveFallback={location.pathname.includes('gamepage')}
         url="/"
+        end
+        icon={faLayerGroup}
+        label={t('collection.sidebar', 'Collection')}
+        isActiveFallback={location.pathname.includes('gamepage')}
+        dataTour="sidebar-collection"
+      />
+      <SidebarItem
+        url="/library"
         icon={faGamepad}
         label={t('Library')}
         onClick={async () => handleRefresh()}

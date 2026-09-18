@@ -130,6 +130,10 @@ const router = createHashRouter([
     children: [
       {
         index: true,
+        lazy: makeLazyFunc(import('./screens/LocalLibrary/Collection'))
+      },
+      {
+        path: 'library',
         lazy: makeLazyFunc(import('./screens/Library'))
       },
       {
@@ -153,8 +157,8 @@ const router = createHashRouter([
         lazy: makeLazyFunc(import('./screens/WebView'))
       },
       {
-        path: 'discounts',
-        lazy: makeLazyFunc(import('./screens/Discounts'))
+        path: 'collection',
+        element: <Navigate replace to="/" />
       },
       {
         path: 'loginweb/:runner',

@@ -273,6 +273,31 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     sessionPlaytime + tsStore.get(`${appName}.totalPlayed`, 0)
   tsStore.set(`${appName}.totalPlayed`, Math.floor(totalPlaytime))
 
+  const { recordLocalSession, backupLudusaviAfterPlay } =
+    await import('local-library')
+  recordLocalSession({
+    appName,
+    startedAt: startPlayingDate,
+    endedAt: finishedPlayingDate
+  })
+  try {
+    if (typeof backupLudusaviAfterPlay === 'function') {
+      await backupLudusaviAfterPlay({
+        appName,
+        title,
+        runner,
+        elapsedSeconds: Math.floor(sessionPlaytime * 60)
+      })
+    } else {
+      logError(
+        'Ludusavi after-play hook is missing; restart Heroic Local',
+        LogPrefix.Backend
+      )
+    }
+  } catch (error) {
+    logError(['Ludusavi after-play failed:', error], LogPrefix.Backend)
+  }
+
   const { disablePlaytimeSync } = GlobalConfig.get().getSettings()
   if (runner === 'gog') {
     if (!disablePlaytimeSync) {

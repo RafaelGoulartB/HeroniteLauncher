@@ -9,7 +9,7 @@
   background: var(--primary-button, var(--accent));
   padding: var(--space-xs) var(--space-md);
   border: none;
-  margin: 0 var(--space-lg);
+  margin: 0 var(--space-sm) 0 var(--space-md);
   cursor: pointer;
   text-transform: uppercase;
   transition: 300ms;

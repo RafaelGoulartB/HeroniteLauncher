@@ -54,6 +54,49 @@ import type { GOGCloudSavesLocation, UserData } from './gog'
 import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
+import type {
+  LocalGameMeta,
+  LocalGameSession,
+  PlayniteImportArgs,
+  PlayniteImportPreview,
+  PlayniteImportResult,
+  PlayniteMergePreview,
+  PlayniteExportResult,
+  PlaynitePreviewArgs,
+  CompletionStatus,
+  SteamClientUriAction,
+  SteamClientUriResult,
+  SteamHeroCacheResult,
+  CollectionSteamDetails,
+  CollectionArtKind,
+  CollectionGameArt,
+  CollectionWebImage,
+  CollectionWebImageSearchArgs,
+  CollectionBackupInterval,
+  CollectionBackupResult,
+  CollectionSettings,
+  CollectionScreenshotsResult,
+  LudusaviBackupResult,
+  LudusaviSettings,
+  CollectionGameDetailsPatch,
+  CollectionGameDetailsResult,
+  CollectionGameMetadata,
+  CollectionMetadataApplyArgs,
+  CollectionMetadataBulkArgs,
+  CollectionMetadataBulkProgress,
+  CollectionMetadataPreview,
+  CollectionMetadataSearchHit,
+  CollectionMetadataSettings,
+  IgdbCredentialTest,
+  EmulationState,
+  RomScanImportArgs,
+  RomScanImportResult,
+  RomScanPreview,
+  RomScanner,
+  UpsertRomScannerArgs,
+  UpsertUserEmulatorArgs,
+  UserEmulator
+} from './local-library'
 
 // ts-prune-ignore-next
 interface SyncIPCFunctions {
@@ -221,6 +264,156 @@ interface AsyncIPCFunctions {
   requestGameSettings: (appName: string) => Promise<GameSettings>
   writeConfig: (args: { appName: string; config: Partial<AppSettings> }) => void
   refreshLibrary: (library?: Runner | 'all') => Promise<void>
+  previewPlayniteImport: (
+    args: PlaynitePreviewArgs
+  ) => Promise<PlayniteImportPreview>
+  importPlayniteLibrary: (
+    args: PlayniteImportArgs
+  ) => Promise<PlayniteImportResult>
+  mergePlayniteLibrary: () => Promise<PlayniteImportResult>
+  previewPlayniteMerge: () => Promise<PlayniteMergePreview>
+  exportPlayniteLibrary: (targetPath: string) => Promise<PlayniteExportResult>
+  getLastPlayniteLibraryPath: () => Promise<string | undefined>
+  getLocalGameSessions: (appName: string) => Promise<LocalGameSession[]>
+  getLocalGameMeta: (appName: string) => Promise<LocalGameMeta | undefined>
+  getAllLocalGameMeta: () => Promise<Record<string, LocalGameMeta>>
+  getCompletionStatuses: () => Promise<CompletionStatus[]>
+  setGameCompletionStatus: (args: {
+    appName: string
+    statusId: string
+    runner?: LocalGameMeta['runner']
+    title?: string
+    playniteId?: string
+  }) => Promise<LocalGameMeta | undefined>
+  upsertCompletionStatus: (
+    status: CompletionStatus
+  ) => Promise<CompletionStatus[]>
+  deleteCompletionStatus: (id: string) => Promise<CompletionStatus[]>
+  reorderCompletionStatuses: (ids: string[]) => Promise<CompletionStatus[]>
+  openSteamClientUri: (args: {
+    action: SteamClientUriAction
+    steamAppId: string
+  }) => Promise<SteamClientUriResult>
+  cacheSteamHero: (steamAppId: string) => Promise<SteamHeroCacheResult | null>
+  getSteamAppDetails: (args: {
+    steamAppId: string
+    language?: string
+  }) => Promise<CollectionSteamDetails | null>
+  getAllCollectionArt: () => Promise<Record<string, CollectionGameArt>>
+  setCollectionGameArt: (args: {
+    appName: string
+    runner: Runner
+    kind: CollectionArtKind
+    sourcePath: string
+  }) => Promise<CollectionGameArt>
+  searchCollectionWebImages: (
+    args: CollectionWebImageSearchArgs
+  ) => Promise<CollectionWebImage[]>
+  setCollectionGameArtFromUrl: (args: {
+    appName: string
+    runner: Runner
+    kind: CollectionArtKind
+    imageUrl: string
+    thumbUrl?: string
+  }) => Promise<CollectionGameArt>
+  clearCollectionGameArt: (args: {
+    appName: string
+    runner: Runner
+    kind: CollectionArtKind
+  }) => Promise<CollectionGameArt>
+  getCollectionSettings: () => Promise<CollectionSettings>
+  setCollectionUiSettings: (args: {
+    greyUninstalledGames: boolean
+  }) => Promise<CollectionSettings>
+  setCollectionScreenshotsSettings: (args: {
+    folder: string
+  }) => Promise<CollectionSettings>
+  getCollectionScreenshots: (args: {
+    title: string
+    steamAppId?: string
+    aliases?: string[]
+  }) => Promise<CollectionScreenshotsResult>
+  setCollectionBackupSettings: (args: {
+    folder: string
+    interval: CollectionBackupInterval
+  }) => Promise<CollectionSettings>
+  runCollectionBackup: (force?: boolean) => Promise<CollectionBackupResult>
+  setLudusaviSettings: (
+    args: Partial<
+      Pick<
+        LudusaviSettings,
+        | 'enabled'
+        | 'useInstalledConfig'
+        | 'binaryPath'
+        | 'backupPath'
+        | 'format'
+        | 'compression'
+      >
+    >
+  ) => Promise<CollectionSettings>
+  runLudusaviBackup: (args: {
+    appName: string
+    title: string
+    runner: Runner
+    steamAppId?: string
+    storeGameId?: string
+  }) => Promise<LudusaviBackupResult>
+  setCollectionMetadataSettings: (
+    args: Partial<CollectionMetadataSettings>
+  ) => Promise<CollectionSettings>
+  testIgdbCredentials: () => Promise<IgdbCredentialTest>
+  getAllCollectionMetadata: () => Promise<
+    Record<string, CollectionGameMetadata>
+  >
+  getCollectionGameMetadata: (args: {
+    runner: string
+    appName: string
+  }) => Promise<CollectionGameMetadata | undefined>
+  previewCollectionMetadata: (
+    args: CollectionMetadataApplyArgs
+  ) => Promise<CollectionMetadataPreview>
+  applyCollectionMetadata: (
+    args: CollectionMetadataApplyArgs
+  ) => Promise<CollectionGameMetadata>
+  updateCollectionGameDetails: (
+    args: CollectionGameDetailsPatch
+  ) => Promise<CollectionGameDetailsResult>
+  searchCollectionMetadata: (args: {
+    title: string
+  }) => Promise<CollectionMetadataSearchHit[]>
+  startCollectionMetadataBulk: (
+    args: CollectionMetadataBulkArgs
+  ) => Promise<CollectionMetadataBulkProgress>
+  getCollectionMetadataBulkStatus: () => Promise<CollectionMetadataBulkProgress>
+  cancelCollectionMetadataBulk: () => Promise<CollectionMetadataBulkProgress>
+  forceClearLocalPlaying: (args: {
+    appName: string
+    runner: Runner
+  }) => Promise<void>
+  removeCollectionGame: (args: {
+    appName: string
+    runner: Runner
+  }) => Promise<{ ok: boolean; error?: string }>
+  getEmulationState: (refreshDetect?: boolean) => Promise<EmulationState>
+  detectCollectionEmulators: () => Promise<EmulationState>
+  addDetectedEmulators: () => Promise<UserEmulator[]>
+  upsertUserEmulator: (args: UpsertUserEmulatorArgs) => Promise<UserEmulator>
+  removeUserEmulator: (id: string) => Promise<UserEmulator[]>
+  upsertRomScanner: (args: UpsertRomScannerArgs) => Promise<RomScanner>
+  removeRomScanner: (id: string) => Promise<RomScanner[]>
+  previewRomScan: (args: {
+    emulatorId: string
+    profileId: string
+    directory: string
+    scanSubfolders?: boolean
+    mergeRelatedFiles?: boolean
+  }) => Promise<RomScanPreview>
+  importRomScan: (args: RomScanImportArgs) => Promise<RomScanImportResult>
+  runRomScanners: () => Promise<number>
+  setEmulatorLaunchRom: (args: {
+    appName: string
+    romPath: string
+  }) => Promise<LocalGameMeta | undefined>
   launch: (args: LaunchParams) => StatusPromise
   openDialog: (args: OpenDialogOptions) => Promise<string | false>
   install: (args: InstallParams) => Promise<void>
@@ -413,6 +606,9 @@ interface FrontendMessages {
       string,
       { title?: string; art_cover?: string; art_square?: string }
     >
+  ) => void
+  collectionMetadataBulkProgress: (
+    progress: CollectionMetadataBulkProgress
   ) => void
 
   // Used inside tests, so we can be a bit lenient with the type checking here

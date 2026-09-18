@@ -1,0 +1,29 @@
+.collectionPlayniteMenu {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.collectionPlayniteMenu .dropdown {
+  min-width: 240px;
+  z-index: 20;
+}
+
+.collectionPlayniteMenu .dropdown button.collectionPlayniteMenu__item {
+  margin: 0;
+  width: 100%;
+  align-self: stretch;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  color: var(--text-default);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--space-3xs);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  text-transform: none;
+}
+
+.collectionPlayniteMenu .dropdown button.collectionPlayniteMenu__item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

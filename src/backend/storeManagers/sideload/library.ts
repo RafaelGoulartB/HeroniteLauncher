@@ -8,9 +8,15 @@ import { sendFrontendMessage } from 'backend/ipc'
 import { isMac } from 'backend/constants/environment'
 import { LibraryManager } from 'common/types/game_manager'
 import SideloadGame from './games'
+import {
+  applySideloadAppToLocalMeta,
+  initLocalLibrary,
+  refreshLocalInstallStates,
+  refreshMissingLocalCovers
+} from 'local-library'
 
 export default class SideloadLibraryManager implements LibraryManager {
-  init = () => Promise.resolve()
+  init = () => initLocalLibrary()
 
   getGame(id: string): SideloadGame {
     return new SideloadGame(id)
@@ -74,6 +80,10 @@ export default class SideloadLibraryManager implements LibraryManager {
 
     libraryStore.set('games', current)
 
+    applySideloadAppToLocalMeta(
+      gameIndex !== -1 ? current[gameIndex] : current[current.length - 1]
+    )
+
     sendFrontendMessage('refreshLibrary', 'sideload')
 
     return
@@ -84,7 +94,8 @@ export default class SideloadLibraryManager implements LibraryManager {
   }
 
   async refresh() {
-    logWarning(`refresh not implemented on Sideload Library Manager`)
+    await refreshLocalInstallStates()
+    void refreshMissingLocalCovers()
     return null
   }
 

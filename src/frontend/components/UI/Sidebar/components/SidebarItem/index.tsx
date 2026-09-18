@@ -12,6 +12,7 @@ interface SidebarItemProps {
   url?: string
   icon?: FontAwesomeIconProps['icon']
   isActiveFallback?: boolean
+  end?: boolean
   onClick?: MouseEventHandler
   className?: string
   elementType?: 'a' | 'button'
@@ -23,6 +24,7 @@ export default function SidebarItem({
   label,
   url = '',
   isActiveFallback = false,
+  end = false,
   onClick,
   className,
   elementType,
@@ -59,6 +61,7 @@ export default function SidebarItem({
             })
           }
           to={url}
+          end={end}
           onClick={onClick}
           data-tour={dataTour}
         >

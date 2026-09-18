@@ -1,0 +1,98 @@
+.ScanRomsDialog .MuiPaper-root {
+  min-width: min(720px, 94vw);
+}
+
+.ScanRomsDialog__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: min(720px, 90vw);
+  max-height: min(70vh, 640px);
+  overflow: auto;
+}
+
+.ScanRomsDialog__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: flex-end;
+}
+
+.ScanRomsDialog__row .selectFieldWrapper {
+  flex: 1 1 220px;
+}
+
+.ScanRomsDialog__hint,
+.ScanRomsDialog__error {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.ScanRomsDialog__error {
+  color: var(--danger, #e74c3c);
+  white-space: pre-wrap;
+}
+
+.ScanRomsDialog__custom,
+.ScanRomsDialog__toggles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border-radius: var(--space-3xs);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ScanRomsDialog__actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.ScanRomsDialog__previewHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ScanRomsDialog__previewHead span {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.ScanRomsDialog__games {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.ScanRomsDialog__games label {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  padding: 6px 8px;
+  border-radius: var(--space-3xs);
+}
+
+.ScanRomsDialog__games .is-imported {
+  opacity: 0.6;
+}
+
+.ScanRomsDialog__games span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ScanRomsDialog__games em {
+  font-style: normal;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  word-break: break-all;
+}

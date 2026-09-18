@@ -1,0 +1,46 @@
+.CollectionMetadataWizard {
+  min-width: min(520px, 92vw);
+}
+
+.CollectionMetadataWizard__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.CollectionMetadataWizard__meter {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.CollectionMetadataWizard__fill {
+  height: 100%;
+  background: var(--accent, #4c9aed);
+  transition: width 0.2s ease;
+}
+
+.CollectionMetadataWizard__hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.CollectionMetadataWizard__status,
+.CollectionMetadataWizard__current {
+  margin: 0;
+}
+
+.CollectionMetadataWizard__current {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.CollectionMetadataWizard__error {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--danger, #e74c3c);
+  font: inherit;
+  font-size: var(--text-sm);
+}
