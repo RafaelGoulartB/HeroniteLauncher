@@ -315,3 +315,8 @@ export function clearCollectionGameArt(args: {
   }
   return writeArt(args.runner, args.appName, current)
 }
+
+export function removeAllCollectionGameArt(runner: Runner, appName: string) {
+  clearCollectionGameArt({ appName, runner, kind: 'cover' })
+  clearCollectionGameArt({ appName, runner, kind: 'hero' })
+}

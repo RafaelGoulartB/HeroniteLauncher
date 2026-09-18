@@ -280,6 +280,47 @@
     0 10px 24px rgba(0, 0, 0, 0.42);
 }
 
+.collection[data-cover-aspect='igdb'].collection--focused
+  .collectionCard[data-invisible],
+.collection[data-cover-aspect='igdb'].collection--focused
+  .collectionCard__cover,
+.collection[data-cover-aspect='igdb'].collection--focused
+  .collectionCard__link {
+  aspect-ratio: 3 / 4;
+}
+
+.collection[data-cover-aspect='gog'].collection--focused
+  .collectionCard[data-invisible],
+.collection[data-cover-aspect='gog'].collection--focused .collectionCard__cover,
+.collection[data-cover-aspect='gog'].collection--focused .collectionCard__link {
+  aspect-ratio: 11 / 15;
+}
+
+.collection[data-cover-aspect='square'].collection--focused
+  .collectionCard[data-invisible],
+.collection[data-cover-aspect='square'].collection--focused
+  .collectionCard__cover,
+.collection[data-cover-aspect='square'].collection--focused
+  .collectionCard__link {
+  aspect-ratio: 1 / 1;
+}
+
+.collection[data-cover-aspect='dvd'].collection--focused
+  .collectionCard[data-invisible],
+.collection[data-cover-aspect='dvd'].collection--focused .collectionCard__cover,
+.collection[data-cover-aspect='dvd'].collection--focused .collectionCard__link {
+  aspect-ratio: 5 / 7;
+}
+
+.collection[data-cover-aspect='banner'].collection--focused
+  .collectionCard[data-invisible],
+.collection[data-cover-aspect='banner'].collection--focused
+  .collectionCard__cover,
+.collection[data-cover-aspect='banner'].collection--focused
+  .collectionCard__link {
+  aspect-ratio: 16 / 9;
+}
+
 .collection--focused .collectionCard__playtime {
   position: static;
   display: inline-flex;

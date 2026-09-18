@@ -68,8 +68,19 @@ export interface PlayniteGame {
   lastActivity?: string
   added?: string
   notes?: string
+  description?: string
+  coverImage?: string
+  backgroundImage?: string
+  icon?: string
+  releaseDate?: string
   developerIds: string[]
   developers: string[]
+  publishers: string[]
+  genres: string[]
+  tags: string[]
+  features: string[]
+  platforms: string[]
+  series?: string
   gameActions: PlayniteGameAction[]
   roms: PlayniteRom[]
   completionStatusId?: string
@@ -166,9 +177,43 @@ function parseEmulator(doc: BsonDocument): PlayniteEmulator | undefined {
   }
 }
 
+function namesFor(
+  ids: BsonValue | undefined,
+  lookup: Map<string, string>
+): string[] {
+  return asArray(ids)
+    .map((item) => asGuid(item))
+    .filter((item): item is string => Boolean(item))
+    .map((id) => lookup.get(id))
+    .filter((item): item is string => Boolean(item))
+}
+
+function parseReleaseDate(value: BsonValue | undefined): string | undefined {
+  const direct = asString(value)
+  if (direct) return direct
+  const doc = asDoc(value)
+  if (!doc) return undefined
+  const year = asNumber(doc.Year)
+  if (!year) return undefined
+  const month = asNumber(doc.Month)
+  const day = asNumber(doc.Day)
+  if (!month) return String(year)
+  if (!day) return `${year}-${String(month).padStart(2, '0')}`
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+type PlayniteNameMaps = {
+  companies: Map<string, string>
+  genres: Map<string, string>
+  tags: Map<string, string>
+  features: Map<string, string>
+  platforms: Map<string, string>
+  series: Map<string, string>
+}
+
 function parseGame(
   doc: BsonDocument,
-  companies: Map<string, string>
+  maps: PlayniteNameMaps
 ): PlayniteGame | undefined {
   const id = asGuid(doc._id) ?? asGuid(doc.Id)
   const name = asString(doc.Name)
@@ -191,10 +236,24 @@ function parseGame(
     lastActivity: asString(doc.LastActivity),
     added: asString(doc.Added),
     notes: asString(doc.Notes),
+    description: asString(doc.Description),
+    coverImage: asString(doc.CoverImage),
+    backgroundImage: asString(doc.BackgroundImage),
+    icon: asString(doc.Icon),
+    releaseDate: parseReleaseDate(doc.ReleaseDate) ?? asString(doc.ReleaseYear),
     developerIds,
     developers: developerIds
-      .map((devId) => companies.get(devId))
+      .map((devId) => maps.companies.get(devId))
       .filter((item): item is string => Boolean(item)),
+    publishers: namesFor(doc.PublisherIds, maps.companies),
+    genres: namesFor(doc.GenreIds, maps.genres),
+    tags: namesFor(doc.TagIds, maps.tags),
+    features: namesFor(doc.FeatureIds, maps.features),
+    platforms: namesFor(doc.PlatformIds, maps.platforms),
+    series:
+      asString(doc.Series) ||
+      maps.series.get(asGuid(doc.SeriesId) ?? '') ||
+      undefined,
     gameActions: asArray(doc.GameActions)
       .map((item) => asDoc(item))
       .filter((item): item is BsonDocument => Boolean(item))
@@ -266,7 +325,14 @@ function readGameActivity(
 
 export function loadPlayniteLibrary(libraryPath: string): PlayniteLibraryDump {
   const gamesDocs = readDb(libraryPath, 'games.db')
-  const companies = nameMap(readDb(libraryPath, 'companies.db'))
+  const maps: PlayniteNameMaps = {
+    companies: nameMap(readDb(libraryPath, 'companies.db')),
+    genres: nameMap(readDb(libraryPath, 'genres.db')),
+    tags: nameMap(readDb(libraryPath, 'tags.db')),
+    features: nameMap(readDb(libraryPath, 'features.db')),
+    platforms: nameMap(readDb(libraryPath, 'platforms.db')),
+    series: nameMap(readDb(libraryPath, 'series.db'))
+  }
   const emulators = readDb(libraryPath, 'emulators.db')
     .map(parseEmulator)
     .filter((item): item is PlayniteEmulator => Boolean(item))
@@ -281,7 +347,7 @@ export function loadPlayniteLibrary(libraryPath: string): PlayniteLibraryDump {
     libraryPath,
     playniteRoot,
     games: gamesDocs
-      .map((doc) => parseGame(doc, companies))
+      .map((doc) => parseGame(doc, maps))
       .filter((item): item is PlayniteGame => Boolean(item)),
     emulators,
     completionStatuses,

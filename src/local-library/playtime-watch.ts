@@ -186,7 +186,10 @@ function watchLogFile(
   }
 }
 
-export function stopLocalPlaytimeWatch(appName: string): boolean {
+export function stopLocalPlaytimeWatch(
+  appName: string,
+  options?: { killProcess?: boolean }
+): boolean {
   const session = sessions.get(appName)
   if (!session) return false
 
@@ -194,16 +197,36 @@ export function stopLocalPlaytimeWatch(appName: string): boolean {
     session.abort.abort()
   }
 
-  for (const pid of session.pids) {
-    if (!isPidAlive(pid)) continue
-    try {
-      process.kill(pid, 'SIGTERM')
-    } catch {
-      // process already gone
+  if (options?.killProcess) {
+    for (const pid of session.pids) {
+      if (!isPidAlive(pid)) continue
+      try {
+        process.kill(pid, 'SIGTERM')
+      } catch {
+        // process already gone
+      }
     }
   }
 
   return true
+}
+
+export async function forceClearLocalPlaying(
+  appName: string,
+  runner: import('common/types').Runner
+): Promise<void> {
+  stopLocalPlaytimeWatch(appName, { killProcess: false })
+
+  const { callAbortController } =
+    await import('backend/utils/aborthandler/aborthandler')
+  callAbortController(appName)
+
+  const { sendGameStatusUpdate } = await import('backend/utils')
+  sendGameStatusUpdate({
+    appName,
+    runner,
+    status: 'done'
+  })
 }
 
 export function clearLocalPlaytimeWatch(appName: string) {

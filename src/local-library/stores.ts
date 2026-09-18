@@ -70,6 +70,18 @@ export function replaceLocalSessions(
   sessionFile.set('sessions', all)
 }
 
+export function deleteLocalGameMeta(appName: string) {
+  const games = { ...libraryFile.get('games') }
+  delete games[appName]
+  libraryFile.set('games', games)
+}
+
+export function deleteLocalSessions(appName: string) {
+  const all = { ...sessionFile.get('sessions') }
+  delete all[appName]
+  sessionFile.set('sessions', all)
+}
+
 export function countNewLocalSessions(
   appName: string,
   incoming: LocalGameSession[]

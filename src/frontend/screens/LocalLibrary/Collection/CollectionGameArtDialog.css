@@ -1,17 +1,37 @@
 .CollectionGameArtDialog {
-  min-width: min(640px, 92vw);
+  min-width: min(800px, 92vw);
 }
 
 .CollectionGameArtDialog__content {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  max-height: 74vh;
-  overflow: auto;
+  width: min(840px, 90vw);
+  max-width: 840px;
+  height: min(620px, 70vh);
+  max-height: min(620px, 70vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.CollectionGameArtDialog__content * {
+  min-width: 0;
+}
+
+.CollectionGameArtDialog__content [role='tabpanel']:empty {
+  display: none;
+}
+
+.CollectionGameArtDialog__content .MuiTabs-root {
+  width: 100%;
+  margin: 0 calc(var(--space-md) * -1);
+  padding: 0 var(--space-md) var(--space-xs);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .CollectionGameArtDialog__help,
-.CollectionGameArtDialog__game {
+.CollectionGameArtDialog__game,
+.CollectionGameArtDialog__meta {
   margin: 0;
   color: var(--text-secondary);
 }
@@ -19,6 +39,52 @@
 .CollectionGameArtDialog__game {
   color: var(--text-default);
   font-weight: 600;
+}
+
+.CollectionGameArtDialog__meta {
+  font-size: var(--text-sm);
+}
+
+.CollectionGameArtDialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.CollectionGameArtDialog__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-sm);
+}
+
+.CollectionGameArtDialog__tags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.CollectionGameArtDialog__area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.CollectionGameArtDialog__area span {
+  color: var(--text-default);
+}
+
+.CollectionGameArtDialog__area textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.7rem 0.85rem;
+  border: none;
+  border-radius: var(--space-3xs);
+  background: var(--input-background);
+  color: var(--text-secondary);
+  font: inherit;
+  line-height: 1.45;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  resize: vertical;
 }
 
 .CollectionGameArtDialog__slot {
@@ -30,6 +96,8 @@
 
 .CollectionGameArtDialog__slot--hero {
   grid-template-columns: 1fr;
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .CollectionGameArtDialog__copy h4 {

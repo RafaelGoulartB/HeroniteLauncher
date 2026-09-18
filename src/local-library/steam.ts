@@ -1,10 +1,12 @@
 import { spawn } from 'child_process'
 import { parse } from '@node-steam/vdf'
+import { shell } from 'electron'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { homedir } from 'os'
-import { basename, dirname, join } from 'path'
+import { join } from 'path'
 import type LogWriter from 'backend/logger/log_writer'
-import { logError, logInfo, LogPrefix } from 'backend/logger'
+import { isLinux, isMac } from 'backend/constants/environment'
+import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { searchForExecutableOnPath } from 'backend/utils/os/path'
 import type { GameInfo } from 'common/types'
 import type {
@@ -72,6 +74,99 @@ export function invalidateSteamManifestCache() {
   steamManifestCache = null
 }
 
+const STEAM_PROTOCOL_ENV_BLOCKLIST = [
+  /^LD_LIBRARY_PATH$/,
+  /^LD_PRELOAD$/,
+  /^LD_AUDIT$/,
+  /^ELECTRON_/,
+  /^CHROME_/,
+  /^APPIMAGE$/,
+  /^APPDIR$/,
+  /^OWD$/,
+  /^GIO_LAUNCHED_DESKTOP_FILE/,
+  /^MANGOHUD/,
+  /^ENABLE_VKBASALT/,
+  /^OBS_VKCAPTURE/,
+  /^STEAM_RUNTIME/,
+  /^STEAM_COMPAT_/,
+  /^PRESSURE_VESSEL_/,
+  /^PROTON_/,
+  /^WINEDLLOVERRIDES$/,
+  /^WINEPREFIX$/,
+  /^DXVK_/,
+  /^VKD3D_/,
+  /^GST_PLUGIN_/,
+  /^GI_TYPELIB_PATH$/,
+  /^GTK_PATH$/,
+  /^QT_PLUGIN_PATH$/,
+  /^PYTHONPATH$/,
+  /^NODE_/
+]
+
+function envForDesktopProtocol(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {}
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value === undefined) continue
+    if (STEAM_PROTOCOL_ENV_BLOCKLIST.some((pattern) => pattern.test(key))) {
+      continue
+    }
+    env[key] = value
+  }
+  return env
+}
+
+function spawnDesktopHandler(
+  bin: string,
+  args: string[]
+): Promise<SteamClientUriResult> {
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (result: SteamClientUriResult) => {
+      if (settled) return
+      settled = true
+      resolve(result)
+    }
+
+    const child = spawn(bin, args, {
+      detached: true,
+      stdio: 'ignore',
+      env: envForDesktopProtocol()
+    })
+    child.once('error', (error) => finish({ ok: false, error: error.message }))
+    const onSpawned = () => {
+      child.unref()
+      finish({ ok: true })
+    }
+    child.once('spawn', onSpawned)
+    if (typeof child.pid === 'number') onSpawned()
+  })
+}
+
+async function openSteamProtocolUri(
+  uri: string
+): Promise<SteamClientUriResult> {
+  if (isLinux) {
+    const opened = await spawnDesktopHandler('xdg-open', [uri])
+    if (opened.ok) return opened
+    logWarning(`xdg-open failed for ${uri}: ${opened.error}`, LogPrefix.Backend)
+  }
+
+  if (isMac) {
+    const opened = await spawnDesktopHandler('open', [uri])
+    if (opened.ok) return opened
+    logWarning(`open failed for ${uri}: ${opened.error}`, LogPrefix.Backend)
+  }
+
+  try {
+    await shell.openExternal(uri)
+    return { ok: true }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    logError(`Failed to open Steam (${uri}): ${message}`, LogPrefix.Backend)
+    return { ok: false, error: message }
+  }
+}
+
 export async function openSteamClientUri(
   action: SteamClientUriAction,
   steamAppId: string
@@ -85,33 +180,7 @@ export async function openSteamClientUri(
   const uri = `steam://${action}/${steamAppId}`
   logInfo(`Opening Steam via ${uri}`, LogPrefix.Backend)
   invalidateSteamManifestCache()
-
-  return new Promise((resolve) => {
-    let settled = false
-    const finish = (result: SteamClientUriResult) => {
-      if (settled) return
-      settled = true
-      resolve(result)
-    }
-
-    const child = spawn(steamBin, [uri], {
-      detached: true,
-      stdio: 'ignore'
-    })
-    child.once('error', (error) => {
-      logError(
-        `Failed to open Steam (${uri}): ${error.message}`,
-        LogPrefix.Backend
-      )
-      finish({ ok: false, error: error.message })
-    })
-    const onSpawned = () => {
-      child.unref()
-      finish({ ok: true })
-    }
-    child.once('spawn', onSpawned)
-    if (typeof child.pid === 'number') onSpawned()
-  })
+  return openSteamProtocolUri(uri)
 }
 
 export async function steamLibraryRoots(): Promise<string[]> {
@@ -264,6 +333,10 @@ export async function tryLaunchLocalGame(
   logWriter: LogWriter,
   extraArgs: string[] = []
 ): Promise<boolean | null> {
+  const { tryLaunchEmulatedGame } = await import('./emulation/launch')
+  const emulated = await tryLaunchEmulatedGame(gameInfo, logWriter, extraArgs)
+  if (emulated !== null) return emulated
+
   const meta = getLocalGameMeta(gameInfo.app_name)
   if (!meta || meta.launchKind !== 'steam-uri' || !meta.steamAppId) {
     return null
@@ -278,24 +351,10 @@ export async function tryLaunchLocalGame(
   const uri = `steam://rungameid/${meta.steamAppId}`
   logInfo(`Launching ${gameInfo.title} via ${uri}`, LogPrefix.Backend)
 
-  const { callRunner } = await import('backend/launcher')
-  const result = await callRunner(
-    [uri, ...extraArgs],
-    {
-      name: 'sideload',
-      logPrefix: LogPrefix.Sideload,
-      bin: basename(steamBin),
-      dir: dirname(steamBin)
-    },
-    {
-      abortId: gameInfo.app_name,
-      logWriters: [logWriter],
-      logMessagePrefix: LogPrefix.Sideload
-    }
-  )
-
-  if (result.error || result.abort) {
-    return !result.error && !result.abort
+  const result = await openSteamProtocolUri(uri)
+  if (!result.ok) {
+    await logWriter.logError(result.error)
+    return false
   }
 
   const { sendGameStatusUpdate } = await import('backend/utils')
@@ -327,8 +386,10 @@ export async function tryLaunchLocalGame(
 }
 
 export async function tryStopLocalGame(appName: string): Promise<boolean> {
+  const { tryStopEmulatedGame } = await import('./emulation/launch')
+  if (await tryStopEmulatedGame(appName)) return true
   if (!isSteamUriGame(appName)) return false
   const { stopLocalPlaytimeWatch } = await import('./playtime-watch')
-  stopLocalPlaytimeWatch(appName)
+  stopLocalPlaytimeWatch(appName, { killProcess: false })
   return true
 }

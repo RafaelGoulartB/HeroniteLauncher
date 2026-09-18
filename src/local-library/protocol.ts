@@ -17,7 +17,10 @@ function isInside(root: string, target: string) {
   return target === root || target.startsWith(base)
 }
 
-export function localArtUrl(kind: 'heroes' | 'art', ...segments: string[]) {
+export function localArtUrl(
+  kind: 'heroes' | 'art' | 'metadata-art',
+  ...segments: string[]
+) {
   return `${SCHEME}://${kind}/${segments.map(encodeURIComponent).join('/')}`
 }
 
@@ -35,11 +38,19 @@ export function localArtFilePath(url: string): string | null {
     .filter(Boolean)
     .map((part) => decodeURIComponent(part))
   const parts =
-    parsed.hostname === 'heroes' || parsed.hostname === 'art'
+    parsed.hostname === 'heroes' ||
+    parsed.hostname === 'art' ||
+    parsed.hostname === 'metadata-art'
       ? [parsed.hostname, ...fromPath]
       : fromPath
 
-  if (parts[0] !== 'heroes' && parts[0] !== 'art') return null
+  if (
+    parts[0] !== 'heroes' &&
+    parts[0] !== 'art' &&
+    parts[0] !== 'metadata-art'
+  ) {
+    return null
+  }
   if (parts.some((part) => part === '..' || part === '.')) return null
 
   const root = libraryRoot()

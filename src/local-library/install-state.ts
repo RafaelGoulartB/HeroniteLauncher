@@ -2,7 +2,7 @@ import { sendFrontendMessage } from 'backend/ipc'
 import { logInfo, LogPrefix } from 'backend/logger'
 import { libraryStore as sideloadStore } from 'backend/storeManagers/sideload/electronStores'
 import type { GameInfo } from 'common/types'
-import type { LocalGameMeta } from 'common/types/local-library'
+import type { LocalGameMeta, LocalLaunchKind } from 'common/types/local-library'
 import { pathExists } from './playnite/path-remap'
 import { inferredStatusId } from './status'
 import {
@@ -18,6 +18,86 @@ import {
   getLocalGameMeta,
   upsertLocalGameMeta
 } from './stores'
+import {
+  emulatorExecutablePath,
+  emulatorRomInstalled
+} from './emulation/launch'
+
+function firstExistingPath(...paths: Array<string | undefined>): string {
+  for (const path of paths) {
+    if (pathExists(path)) return path!
+  }
+  return ''
+}
+
+function localExecutablePath(game: GameInfo, meta: LocalGameMeta): string {
+  return firstExistingPath(meta.remappedExecutable, game.install.executable)
+}
+
+function launchKindForLocalExe(existing?: LocalLaunchKind): LocalLaunchKind {
+  return existing === 'emulator' ? 'emulator' : 'executable'
+}
+
+function looksLikeSteamBinary(path: string): boolean {
+  const normalized = path.replaceAll('\\', '/').toLowerCase()
+  return (
+    path === 'steam' ||
+    normalized.endsWith('/steam') ||
+    normalized.endsWith('/steam.exe') ||
+    normalized.endsWith('/steam.sh')
+  )
+}
+
+export function applySideloadAppToLocalMeta(game: GameInfo): void {
+  const executable = game.install.executable?.trim() || ''
+  const existing = getLocalGameMeta(game.app_name)
+
+  if (!executable && !existing) return
+  if (
+    existing?.launchKind === 'steam-uri' &&
+    (!executable || looksLikeSteamBinary(executable))
+  ) {
+    return
+  }
+
+  upsertLocalGameMeta({
+    appName: game.app_name,
+    runner: 'sideload',
+    playniteId: existing?.playniteId ?? `heroic_${game.app_name}`,
+    pluginId: existing?.pluginId,
+    source: existing?.source ?? 'manual',
+    launchKind: executable
+      ? launchKindForLocalExe(existing?.launchKind)
+      : (existing?.launchKind ?? 'unavailable'),
+    steamAppId: existing?.steamAppId,
+    storeGameId: existing?.storeGameId,
+    title: game.title || existing?.title || game.app_name,
+    windowsInstallDirectory: existing?.windowsInstallDirectory,
+    windowsExecutable: existing?.windowsExecutable,
+    remappedExecutable: executable || undefined,
+    launcherArgs: existing?.launcherArgs,
+    roms: existing?.roms,
+    emulatorName: existing?.emulatorName,
+    emulatorId: existing?.emulatorId,
+    emulatorProfileId: existing?.emulatorProfileId,
+    platformId: existing?.platformId,
+    selectedRomPath: existing?.selectedRomPath,
+    notes: existing?.notes,
+    completionStatusId: existing?.completionStatusId,
+    playniteCompletionStatusId: existing?.playniteCompletionStatusId
+  })
+}
+
+function syncMetaExecutable(meta: LocalGameMeta, executable: string): void {
+  if (!executable || executable === (meta.remappedExecutable ?? '')) return
+  if (meta.launchKind === 'steam-uri') return
+
+  upsertLocalGameMeta({
+    ...meta,
+    remappedExecutable: executable,
+    launchKind: launchKindForLocalExe(meta.launchKind)
+  })
+}
 
 function nextInstallState(
   game: GameInfo,
@@ -35,17 +115,29 @@ function nextInstallState(
     }
   }
 
-  if (meta.launchKind === 'executable' || meta.launchKind === 'emulator') {
-    const executable = pathExists(meta.remappedExecutable)
-      ? meta.remappedExecutable!
-      : ''
+  if (meta.launchKind === 'emulator') {
+    const executable =
+      emulatorExecutablePath(meta) || localExecutablePath(game, meta)
+    const romsOk = emulatorRomInstalled(meta)
+    const exeOk =
+      meta.emulatorId && executable === 'flatpak'
+        ? true
+        : Boolean(executable && pathExists(executable))
+    return {
+      is_installed: exeOk && romsOk,
+      executable: exeOk ? executable : ''
+    }
+  }
+
+  const executable = localExecutablePath(game, meta)
+  if (meta.launchKind === 'executable' || executable) {
     return {
       is_installed: Boolean(executable),
       executable
     }
   }
 
-  return { is_installed: false, executable: game.install.executable ?? '' }
+  return { is_installed: false, executable: '' }
 }
 
 function steamSideloadEntry(
@@ -112,6 +204,7 @@ export async function refreshLocalInstallStates(): Promise<void> {
     if (!meta) continue
 
     const next = nextInstallState(game, meta, installedSteam, steamBin)
+    syncMetaExecutable(meta, next.executable)
     if (
       next.is_installed === game.is_installed &&
       next.executable === (game.install.executable ?? '')

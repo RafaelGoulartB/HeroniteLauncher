@@ -10,7 +10,8 @@ import {
   Settings,
   Star,
   StarBorder,
-  Stop
+  Stop,
+  TravelExplore
 } from '@mui/icons-material'
 import type {
   ExtraInfo,
@@ -21,6 +22,7 @@ import type {
 } from 'common/types'
 import type {
   CollectionGameArt,
+  CollectionGameMetadata,
   CollectionSteamDetails,
   CompletionStatus,
   LocalGameMeta,
@@ -37,10 +39,22 @@ import { getCardStatus } from 'frontend/screens/Library/components/GameCard/cons
 import fallBackImage from 'frontend/assets/heroic_card.jpg'
 import { formatPlaytimeMinutes } from './playtime'
 import { STATUS_COLORS } from './statusColors'
+import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
 import { collectionCoverSrc, collectionStageArt } from './steamArt'
 import { sanitizeSteamDescription } from './steamHtml'
 import CollectionGameArtDialog from './CollectionGameArtDialog'
+import CollectionMetadataDialog from './CollectionMetadataDialog'
+import PickRomDialog from './PickRomDialog'
+import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
+import { collectionGameTitle } from './collectionTitle'
+import {
+  EMPTY_FACET_FILTERS,
+  facetKey,
+  type CollectionFacetFilters,
+  type CollectionFacetKind
+} from './collectionFacets'
+import { EMPTY_TAG_OPTIONS, type CollectionTagKind } from './collectionTags'
 import './CollectionFocus.css'
 
 const SOURCE_LABELS: Record<LocalGameSource, string> = {
@@ -59,8 +73,14 @@ type Props = {
   meta?: LocalGameMeta
   statuses: CompletionStatus[]
   collectionArt?: CollectionGameArt
+  metadata?: CollectionGameMetadata
   cachedHeroUrl?: string
+  facetFilters?: CollectionFacetFilters
+  onFacetFilter?: (kind: CollectionFacetKind, value: string) => void
+  tagOptions?: Record<CollectionTagKind, string[]>
   onArtChange: (art: CollectionGameArt) => void
+  onMetadataChange: (metadata: CollectionGameMetadata) => void
+  onMetaChange?: (meta: LocalGameMeta) => void
   onClose: () => void
 }
 
@@ -72,15 +92,54 @@ function splitNames(value?: string) {
     .filter(Boolean)
 }
 
-function FactChips({ items }: { items: string[] }) {
+function FactChips({
+  items,
+  kind,
+  activeValue,
+  onSelect,
+  className
+}: {
+  items: string[]
+  kind?: CollectionFacetKind
+  activeValue?: string | null
+  onSelect?: (kind: CollectionFacetKind, value: string) => void
+  className?: string
+}) {
   if (!items.length) return null
   return (
-    <dd className="collectionFocus__chips">
-      {items.map((item) => (
-        <span key={item} className="collectionFocus__chip">
-          {item}
-        </span>
-      ))}
+    <dd
+      className={
+        className
+          ? `collectionFocus__chips ${className}`
+          : 'collectionFocus__chips'
+      }
+    >
+      {items.map((item) => {
+        const clickable = Boolean(kind && onSelect)
+        const active =
+          Boolean(activeValue) &&
+          facetKey(activeValue as string) === facetKey(item)
+        const className = active
+          ? 'collectionFocus__chip is-active'
+          : 'collectionFocus__chip'
+        if (!clickable || !kind || !onSelect) {
+          return (
+            <span key={item} className={className}>
+              {item}
+            </span>
+          )
+        }
+        return (
+          <button
+            key={item}
+            type="button"
+            className={`${className} is-button`}
+            onClick={() => onSelect(kind, item)}
+          >
+            {item}
+          </button>
+        )
+      })}
     </dd>
   )
 }
@@ -104,8 +163,9 @@ function formatHours(value?: number) {
 
 function formatTimestamp(value?: string) {
   if (!value) return ''
+  if (/^\d{4}$/.test(value)) return value
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
+  if (Number.isNaN(date.getTime())) return value
   return date.toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'numeric',
@@ -130,8 +190,14 @@ export default function CollectionFocus({
   meta,
   statuses,
   collectionArt,
+  metadata,
   cachedHeroUrl,
+  facetFilters,
+  onFacetFilter,
+  tagOptions,
   onArtChange,
+  onMetadataChange,
+  onMetaChange,
   onClose
 }: Props) {
   const { t } = useTranslation()
@@ -150,8 +216,14 @@ export default function CollectionFocus({
       meta={meta}
       statuses={statuses}
       collectionArt={collectionArt}
+      metadata={metadata}
       cachedHeroUrl={cachedHeroUrl}
+      facetFilters={facetFilters}
+      onFacetFilter={onFacetFilter}
+      tagOptions={tagOptions}
       onArtChange={onArtChange}
+      onMetadataChange={onMetadataChange}
+      onMetaChange={onMetaChange}
       onClose={onClose}
     />
   )
@@ -162,16 +234,28 @@ function CollectionFocusPanel({
   meta,
   statuses,
   collectionArt,
+  metadata,
   cachedHeroUrl,
+  facetFilters = EMPTY_FACET_FILTERS,
+  onFacetFilter,
+  tagOptions = EMPTY_TAG_OPTIONS,
   onArtChange,
+  onMetadataChange,
+  onMetaChange,
   onClose
 }: {
   game: GameInfo
   meta?: LocalGameMeta
   statuses: CompletionStatus[]
   collectionArt?: CollectionGameArt
+  metadata?: CollectionGameMetadata
   cachedHeroUrl?: string
+  facetFilters?: CollectionFacetFilters
+  onFacetFilter?: (kind: CollectionFacetKind, value: string) => void
+  tagOptions?: Record<CollectionTagKind, string[]>
   onArtChange: (art: CollectionGameArt) => void
+  onMetadataChange: (metadata: CollectionGameMetadata) => void
+  onMetaChange?: (meta: LocalGameMeta) => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -185,6 +269,8 @@ function CollectionFocusPanel({
     language
   } = useContext(ContextProvider)
   const [artOpen, setArtOpen] = useState(false)
+  const [metadataOpen, setMetadataOpen] = useState(false)
+  const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const [gameInfo, setGameInfo] = useState<GameInfo>(game)
   const [extraInfo, setExtraInfo] = useState<ExtraInfo | null>(
@@ -198,8 +284,8 @@ function CollectionFocusPanel({
     () => timestampStore.get_nodefault(game.app_name)?.totalPlayed ?? 0
   )
 
-  const { app_name: appName, runner, overrides } = game
-  const title = overrides?.title || game.title
+  const { app_name: appName, runner } = game
+  const title = collectionGameTitle(gameInfo, metadata)
   const steamAppId = steamAppIdFromMeta(meta)
   const storeAppId = meta?.steamAppId
 
@@ -262,15 +348,16 @@ function CollectionFocusPanel({
   )
 
   useEffect(() => {
-    if (!artOpen) return
+    if (!artOpen && !metadataOpen) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.stopImmediatePropagation()
       setArtOpen(false)
+      setMetadataOpen(false)
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [artOpen])
+  }, [artOpen, metadataOpen])
 
   useEffect(() => {
     setPlayedMinutes(timestampStore.get_nodefault(appName)?.totalPlayed ?? 0)
@@ -281,19 +368,29 @@ function CollectionFocusPanel({
     statuses.find((item) => item.slug === 'not-played')
 
   const cover =
-    collectionCoverSrc(gameInfo, collectionArt, storeAppId) || fallBackImage
+    collectionCoverSrc(
+      gameInfo,
+      collectionArt,
+      storeAppId,
+      metadata?.coverUrl
+    ) || fallBackImage
   const defaultCover = collectionCoverSrc(gameInfo, undefined, storeAppId)
   const defaultHero = collectionStageArt(gameInfo, meta, cachedHeroUrl)?.src
-  const descriptionHtml = steamDetails?.descriptionHtml
-    ? sanitizeSteamDescription(steamDetails.descriptionHtml)
-    : ''
+  const useSteamHtml =
+    metadata?.fieldSources.description === 'steam' || !metadata?.description
+  const descriptionHtml =
+    useSteamHtml && steamDetails?.descriptionHtml
+      ? sanitizeSteamDescription(steamDetails.descriptionHtml)
+      : ''
   const description = toPlainText(
-    extraInfo?.about?.shortDescription ||
+    metadata?.description ||
+      extraInfo?.about?.shortDescription ||
       extraInfo?.about?.description ||
       steamDetails?.shortDescription ||
       gameInfo.description
   )
   const genres = (
+    (metadata?.genres.length ? metadata.genres : undefined) ||
     steamDetails?.genres ||
     extraInfo?.genres ||
     gameInfo.extra?.genres ||
@@ -301,19 +398,33 @@ function CollectionFocusPanel({
     []
   ).filter(Boolean)
   const releaseDate =
+    metadata?.releaseDate ||
     steamDetails?.releaseDate ||
     extraInfo?.releaseDate ||
     wikiInfo?.pcgamingwiki?.releaseDate?.[0]?.replace(/^[^:]+:\s*/, '')
-  const developer = steamDetails?.developers.join(', ') || gameInfo.developer
-  const publisher = steamDetails?.publishers.join(', ')
-  const developers = steamDetails?.developers?.length
-    ? steamDetails.developers
-    : splitNames(developer)
-  const publishers = steamDetails?.publishers?.length
-    ? steamDetails.publishers
-    : splitNames(publisher)
-  const features = steamDetails?.features ?? []
-  const platform = gameInfo.install?.platform || 'PC'
+  const developer =
+    metadata?.developers.join(', ') ||
+    steamDetails?.developers.join(', ') ||
+    gameInfo.developer
+  const publisher =
+    metadata?.publishers.join(', ') || steamDetails?.publishers.join(', ')
+  const developers = metadata?.developers?.length
+    ? metadata.developers
+    : steamDetails?.developers?.length
+      ? steamDetails.developers
+      : splitNames(developer)
+  const publishers = metadata?.publishers?.length
+    ? metadata.publishers
+    : steamDetails?.publishers?.length
+      ? steamDetails.publishers
+      : splitNames(publisher)
+  const features = metadata?.features.length
+    ? metadata.features
+    : (steamDetails?.features ?? [])
+  const platforms = metadata?.platforms.length
+    ? metadata.platforms
+    : [gameInfo.install?.platform || 'PC']
+  const platform = platforms[0] || 'PC'
   const sourceLabel = libraryLabel(
     meta,
     runner,
@@ -371,13 +482,28 @@ function CollectionFocusPanel({
         showDialogModal
       })
     }
-    if (isPlaying || isUpdating) {
+    if (isUpdating) {
       return sendKill(appName, runner)
+    }
+
+    if (isPlaying) {
+      confirmForceStopPlaying({
+        appName,
+        runner,
+        title,
+        t: tGame,
+        showDialogModal
+      })
+      return
     }
     if (isQueued) {
       return window.api.removeFromDMQueue(appName)
     }
     if (isInstalled) {
+      if (emulatorNeedsRomPick(meta)) {
+        setPickRomOpen(true)
+        return
+      }
       const isOffline = connectivity.status !== 'online'
       await launch({
         appName,
@@ -543,13 +669,42 @@ function CollectionFocusPanel({
                   {developers.length > 0 && (
                     <div>
                       <dt>{tGame('info.developer', 'Developer')}</dt>
-                      <FactChips items={developers} />
+                      <FactChips
+                        items={developers}
+                        kind="developer"
+                        activeValue={facetFilters.developer}
+                        onSelect={onFacetFilter}
+                      />
                     </div>
                   )}
                   {publishers.length > 0 && (
                     <div>
                       <dt>{tGame('info.publisher', 'Publisher')}</dt>
-                      <FactChips items={publishers} />
+                      <FactChips
+                        items={publishers}
+                        kind="publisher"
+                        activeValue={facetFilters.publisher}
+                        onSelect={onFacetFilter}
+                      />
+                    </div>
+                  )}
+                  {metadata?.series && (
+                    <div>
+                      <dt>{t('collection.metadata.field.series', 'Series')}</dt>
+                      <FactChips
+                        items={[metadata.series]}
+                        kind="series"
+                        activeValue={facetFilters.series}
+                        onSelect={onFacetFilter}
+                      />
+                    </div>
+                  )}
+                  {typeof metadata?.criticScore === 'number' && (
+                    <div>
+                      <dt>
+                        {t('collection.metadata.field.criticScore', 'Score')}
+                      </dt>
+                      <dd>{metadata.criticScore}</dd>
                     </div>
                   )}
                   <div>
@@ -587,22 +742,38 @@ function CollectionFocusPanel({
                       <FactChips items={features.slice(0, 8)} />
                     </div>
                   )}
+                  {metadata && metadata.themes.length > 0 && (
+                    <div className="is-split">
+                      <dt>{t('collection.metadata.field.themes', 'Themes')}</dt>
+                      <FactChips items={metadata.themes.slice(0, 8)} />
+                    </div>
+                  )}
+                  {platforms.length > 1 && (
+                    <div className="is-split">
+                      <dt>
+                        {t('collection.metadata.field.platforms', 'Platforms')}
+                      </dt>
+                      <FactChips items={platforms.slice(0, 8)} />
+                    </div>
+                  )}
                   {genres.length > 0 && (
                     <div className="is-split">
                       <dt>{t('collection.focus.tags', 'Tags')}</dt>
-                      <dd className="collectionFocus__chips collectionFocus__tags">
-                        {genres.map((genre) => (
-                          <span key={genre} className="collectionFocus__chip">
-                            {genre}
-                          </span>
-                        ))}
-                      </dd>
+                      <FactChips
+                        items={genres}
+                        kind="genre"
+                        activeValue={facetFilters.genre}
+                        onSelect={onFacetFilter}
+                        className="collectionFocus__tags"
+                      />
                     </div>
                   )}
-                  {meta?.notes && (
+                  {(metadata?.notes || meta?.notes) && (
                     <div className="is-split">
                       <dt>{t('collection.focus.notes', 'Notes')}</dt>
-                      <dd className="is-wrap">{meta.notes}</dd>
+                      <dd className="is-wrap">
+                        {metadata?.notes || meta?.notes}
+                      </dd>
                     </div>
                   )}
                 </dl>
@@ -636,8 +807,17 @@ function CollectionFocusPanel({
         <button
           type="button"
           className="collectionFocus__iconBtn"
-          title={t('collection.gameArt.title', 'Game images')}
-          aria-label={t('collection.gameArt.title', 'Game images')}
+          title={t('collection.metadata.title', 'Collection metadata')}
+          aria-label={t('collection.metadata.title', 'Collection metadata')}
+          onClick={() => setMetadataOpen(true)}
+        >
+          <TravelExplore />
+        </button>
+        <button
+          type="button"
+          className="collectionFocus__iconBtn"
+          title={t('collection.gameConfig.title', 'Game settings')}
+          aria-label={t('collection.gameConfig.title', 'Game settings')}
           onClick={() => setArtOpen(true)}
         >
           <Settings />
@@ -657,10 +837,50 @@ function CollectionFocusPanel({
           game={gameInfo}
           title={title}
           art={collectionArt}
+          metadata={metadata}
+          meta={meta}
           defaultCover={defaultCover}
           defaultHero={defaultHero}
+          tagOptions={tagOptions}
           onChange={onArtChange}
+          onDetailsChange={(next) => {
+            onMetadataChange(next.metadata)
+            if (next.meta) onMetaChange?.(next.meta)
+          }}
           onClose={() => setArtOpen(false)}
+        />
+      )}
+      {metadataOpen && (
+        <CollectionMetadataDialog
+          game={gameInfo}
+          title={title}
+          steamAppId={storeAppId}
+          metadata={metadata}
+          onChange={onMetadataChange}
+          onClose={() => setMetadataOpen(false)}
+        />
+      )}
+      {pickRomOpen && meta?.roms && (
+        <PickRomDialog
+          title={title}
+          roms={meta.roms}
+          selectedPath={meta.selectedRomPath}
+          onClose={() => setPickRomOpen(false)}
+          onPlay={(romPath) => {
+            setPickRomOpen(false)
+            void (async () => {
+              await prepareEmulatorLaunch(appName, romPath)
+              const isOffline = connectivity.status !== 'online'
+              await launch({
+                appName,
+                t: tGame,
+                runner,
+                hasUpdate,
+                showDialogModal,
+                notPlayableOffline: isOffline && !gameInfo.canRunOffline
+              })
+            })()
+          }}
         />
       )}
     </aside>

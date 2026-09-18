@@ -10,6 +10,10 @@ export function collectionArtKey(runner: string, appName: string) {
   return `${runner}:${appName}`
 }
 
+export function collectionMetadataKey(runner: string, appName: string) {
+  return `${runner === 'zoom' ? 'sideload' : runner}:${appName}`
+}
+
 function isLocalSrc(src: string) {
   return (
     src.startsWith('file:') ||
@@ -41,9 +45,11 @@ function firstDefaultSrc(values: (string | undefined)[]) {
 export function collectionCoverSrc(
   game: GameInfo,
   art?: CollectionGameArt,
-  steamAppId?: string
+  steamAppId?: string,
+  metadataCover?: string
 ): string {
   if (art?.coverUrl) return art.coverUrl
+  if (metadataCover) return metadataCover
   const steam = steamAppId ? steamLibraryCover(steamAppId) : ''
   const raw = firstDefaultSrc([
     game.overrides?.art_square,
@@ -61,10 +67,15 @@ export function collectionStageArt(
   game: GameInfo,
   meta?: LocalGameMeta,
   cachedHeroUrl?: string,
-  customHeroUrl?: string
+  customHeroUrl?: string,
+  metadataHeroUrl?: string
 ): { src: string; fallback?: string } | null {
   if (customHeroUrl) {
     return { src: customHeroUrl }
+  }
+
+  if (metadataHeroUrl) {
+    return { src: metadataHeroUrl }
   }
 
   if (cachedHeroUrl) {

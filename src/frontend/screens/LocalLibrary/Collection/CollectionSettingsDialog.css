@@ -1,13 +1,36 @@
 .CollectionSettingsDialog {
-  min-width: min(560px, 92vw);
+  min-width: min(800px, 92vw);
 }
 
 .CollectionSettingsDialog__content {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  max-height: 70vh;
-  overflow: auto;
+  width: min(840px, 90vw);
+  max-width: 840px;
+  height: min(620px, 70vh);
+  max-height: min(620px, 70vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.CollectionSettingsDialog__content * {
+  min-width: 0;
+}
+
+/* MUI keeps every TabPanel mounted; the inactive ones render an empty
+   wrapper. Without this they still count as flex items and add extra
+   gaps, so later tabs would end up with more space above their content
+   than earlier ones. */
+.CollectionSettingsDialog__content [role='tabpanel']:empty {
+  display: none;
+}
+
+.CollectionSettingsDialog__content .MuiTabs-root {
+  width: 100%;
+  margin: 0 calc(var(--space-md) * -1);
+  padding: 0 var(--space-md) var(--space-xs);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .CollectionSettingsDialog__section {
@@ -18,6 +41,13 @@
 
 .CollectionSettingsDialog__section h4 {
   margin: 0;
+}
+
+.CollectionSettingsDialog__subheading {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-default);
 }
 
 .CollectionSettingsDialog__section p {
@@ -31,6 +61,37 @@
 
 .CollectionSettingsDialog__ok {
   color: var(--success, var(--text-default)) !important;
+}
+
+.CollectionSettingsDialog__callout {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--space-3xs);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.CollectionSettingsDialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.CollectionSettingsDialog__priority {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+
+.CollectionSettingsDialog__section .advancedFields {
+  margin-top: var(--space-xs);
+}
+
+.CollectionSettingsDialog__section .advancedFields > *:not(summary) {
+  margin-top: var(--space-sm);
 }
 
 .CollectionSettingsDialog__error {

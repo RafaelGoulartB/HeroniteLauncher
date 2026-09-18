@@ -76,7 +76,25 @@ import type {
   CollectionBackupResult,
   CollectionSettings,
   LudusaviBackupResult,
-  LudusaviSettings
+  LudusaviSettings,
+  CollectionGameDetailsPatch,
+  CollectionGameDetailsResult,
+  CollectionGameMetadata,
+  CollectionMetadataApplyArgs,
+  CollectionMetadataBulkArgs,
+  CollectionMetadataBulkProgress,
+  CollectionMetadataPreview,
+  CollectionMetadataSearchHit,
+  CollectionMetadataSettings,
+  IgdbCredentialTest,
+  EmulationState,
+  RomScanImportArgs,
+  RomScanImportResult,
+  RomScanPreview,
+  RomScanner,
+  UpsertRomScannerArgs,
+  UpsertUserEmulatorArgs,
+  UserEmulator
 } from './local-library'
 
 // ts-prune-ignore-next
@@ -331,6 +349,62 @@ interface AsyncIPCFunctions {
     steamAppId?: string
     storeGameId?: string
   }) => Promise<LudusaviBackupResult>
+  setCollectionMetadataSettings: (
+    args: Partial<CollectionMetadataSettings>
+  ) => Promise<CollectionSettings>
+  testIgdbCredentials: () => Promise<IgdbCredentialTest>
+  getAllCollectionMetadata: () => Promise<
+    Record<string, CollectionGameMetadata>
+  >
+  getCollectionGameMetadata: (args: {
+    runner: string
+    appName: string
+  }) => Promise<CollectionGameMetadata | undefined>
+  previewCollectionMetadata: (
+    args: CollectionMetadataApplyArgs
+  ) => Promise<CollectionMetadataPreview>
+  applyCollectionMetadata: (
+    args: CollectionMetadataApplyArgs
+  ) => Promise<CollectionGameMetadata>
+  updateCollectionGameDetails: (
+    args: CollectionGameDetailsPatch
+  ) => Promise<CollectionGameDetailsResult>
+  searchCollectionMetadata: (args: {
+    title: string
+  }) => Promise<CollectionMetadataSearchHit[]>
+  startCollectionMetadataBulk: (
+    args: CollectionMetadataBulkArgs
+  ) => Promise<CollectionMetadataBulkProgress>
+  getCollectionMetadataBulkStatus: () => Promise<CollectionMetadataBulkProgress>
+  cancelCollectionMetadataBulk: () => Promise<CollectionMetadataBulkProgress>
+  forceClearLocalPlaying: (args: {
+    appName: string
+    runner: Runner
+  }) => Promise<void>
+  removeCollectionGame: (args: {
+    appName: string
+    runner: Runner
+  }) => Promise<{ ok: boolean; error?: string }>
+  getEmulationState: (refreshDetect?: boolean) => Promise<EmulationState>
+  detectCollectionEmulators: () => Promise<EmulationState>
+  addDetectedEmulators: () => Promise<UserEmulator[]>
+  upsertUserEmulator: (args: UpsertUserEmulatorArgs) => Promise<UserEmulator>
+  removeUserEmulator: (id: string) => Promise<UserEmulator[]>
+  upsertRomScanner: (args: UpsertRomScannerArgs) => Promise<RomScanner>
+  removeRomScanner: (id: string) => Promise<RomScanner[]>
+  previewRomScan: (args: {
+    emulatorId: string
+    profileId: string
+    directory: string
+    scanSubfolders?: boolean
+    mergeRelatedFiles?: boolean
+  }) => Promise<RomScanPreview>
+  importRomScan: (args: RomScanImportArgs) => Promise<RomScanImportResult>
+  runRomScanners: () => Promise<number>
+  setEmulatorLaunchRom: (args: {
+    appName: string
+    romPath: string
+  }) => Promise<LocalGameMeta | undefined>
   launch: (args: LaunchParams) => StatusPromise
   openDialog: (args: OpenDialogOptions) => Promise<string | false>
   install: (args: InstallParams) => Promise<void>
@@ -523,6 +597,9 @@ interface FrontendMessages {
       string,
       { title?: string; art_cover?: string; art_square?: string }
     >
+  ) => void
+  collectionMetadataBulkProgress: (
+    progress: CollectionMetadataBulkProgress
   ) => void
 
   // Used inside tests, so we can be a bit lenient with the type checking here

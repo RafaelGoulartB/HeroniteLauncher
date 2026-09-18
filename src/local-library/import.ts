@@ -18,6 +18,7 @@ import type {
   PlaynitePreviewArgs
 } from 'common/types/local-library'
 import { fetchCoversForGame } from './covers'
+import { seedPlayniteMetadata } from './metadata'
 import {
   mapPlayniteGame,
   MappedPlayniteGame,
@@ -26,6 +27,7 @@ import {
 } from './playnite/mapper'
 import { collectWindowsDrives } from './playnite/path-remap'
 import { loadPlayniteLibrary, PlayniteGame } from './playnite/reader'
+import { ensurePlayniteEmulator } from './emulation/playnite'
 import {
   findMetaByPlayniteId,
   countNewLocalSessions,
@@ -140,6 +142,14 @@ function mergeExistingMeta(
     storeGameId: incoming.storeGameId ?? existed.storeGameId,
     windowsInstallDirectory: incoming.windowsInstallDirectory,
     windowsExecutable: incoming.windowsExecutable,
+    remappedExecutable:
+      incoming.remappedExecutable ?? existed.remappedExecutable,
+    launcherArgs: incoming.launcherArgs ?? existed.launcherArgs,
+    roms: incoming.roms ?? existed.roms,
+    emulatorName: incoming.emulatorName ?? existed.emulatorName,
+    emulatorId: incoming.emulatorId ?? existed.emulatorId,
+    emulatorProfileId: incoming.emulatorProfileId ?? existed.emulatorProfileId,
+    platformId: incoming.platformId ?? existed.platformId,
     playniteCompletionStatusId: incoming.playniteCompletionStatusId,
     completionStatusId: incoming.completionStatusId
   }
@@ -273,6 +283,23 @@ export async function importPlayniteLibrary(
     try {
       const sessions = playniteSessionsToLocal(game.id, dump.sessionsByGameId)
       const mapped = mapPlayniteGame(game, dump.emulators, sessions, driveMap)
+      if (mapped.meta.launchKind === 'emulator' && mapped.meta.emulatorId) {
+        const playniteEmu = dump.emulators.find(
+          (item) => item.id === mapped.meta.emulatorId
+        )
+        if (playniteEmu) {
+          const user = ensurePlayniteEmulator(playniteEmu, driveMap)
+          if (user) {
+            mapped.meta.emulatorId = user.id
+            mapped.meta.emulatorProfileId =
+              user.profiles.find(
+                (item) => item.id === mapped.meta.emulatorProfileId
+              )?.id ?? user.profiles[0]?.id
+            mapped.meta.emulatorName = user.name
+            mapped.meta.remappedExecutable = user.executable
+          }
+        }
+      }
       const destination = destinationFor(mapped)
       const existed = findMetaByPlayniteId(game.id)
       mapped.meta.completionStatusId = existed
@@ -310,6 +337,12 @@ export async function importPlayniteLibrary(
           mapped.lastPlayed
         )
         mergeLocalSessions(mapped.meta.appName, mapped.sessions)
+        await seedPlayniteMetadata({
+          appName: mapped.meta.appName,
+          runner: mapped.meta.runner,
+          game,
+          libraryPath: dump.libraryPath
+        })
         result.sessionsImported += mapped.sessions.length
         result.updated += 1
         if (
@@ -342,6 +375,12 @@ export async function importPlayniteLibrary(
           mapped.lastPlayed
         )
         mergeLocalSessions(matched.app_name, mapped.sessions)
+        await seedPlayniteMetadata({
+          appName: mapped.meta.appName,
+          runner: mapped.meta.runner,
+          game,
+          libraryPath: dump.libraryPath
+        })
         result.sessionsImported += mapped.sessions.length
         result.matchedStore += 1
         continue
@@ -380,7 +419,15 @@ export async function importPlayniteLibrary(
         mapped.lastPlayed
       )
       mergeLocalSessions(mapped.meta.appName, mapped.sessions)
-      await applyLauncherArgs(mapped.meta.appName, mapped.meta.launcherArgs)
+      await seedPlayniteMetadata({
+        appName: mapped.meta.appName,
+        runner: mapped.meta.runner,
+        game,
+        libraryPath: dump.libraryPath
+      })
+      if (mapped.meta.launchKind !== 'emulator') {
+        await applyLauncherArgs(mapped.meta.appName, mapped.meta.launcherArgs)
+      }
       result.sessionsImported += mapped.sessions.length
       if (existed) result.updated += 1
       else result.imported += 1

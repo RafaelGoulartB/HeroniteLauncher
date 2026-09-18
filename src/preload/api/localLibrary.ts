@@ -1,4 +1,4 @@
-import { makeHandlerInvoker } from '../ipc'
+import { frontendListenerSlot, makeHandlerInvoker } from '../ipc'
 
 export const localLibrary = {
   previewImport: makeHandlerInvoker('previewPlayniteImport'),
@@ -28,5 +28,30 @@ export const localLibrary = {
   setBackupSettings: makeHandlerInvoker('setCollectionBackupSettings'),
   runBackup: makeHandlerInvoker('runCollectionBackup'),
   setLudusaviSettings: makeHandlerInvoker('setLudusaviSettings'),
-  runLudusaviBackup: makeHandlerInvoker('runLudusaviBackup')
+  runLudusaviBackup: makeHandlerInvoker('runLudusaviBackup'),
+  setMetadataSettings: makeHandlerInvoker('setCollectionMetadataSettings'),
+  testIgdbCredentials: makeHandlerInvoker('testIgdbCredentials'),
+  getAllMetadata: makeHandlerInvoker('getAllCollectionMetadata'),
+  getGameMetadata: makeHandlerInvoker('getCollectionGameMetadata'),
+  previewMetadata: makeHandlerInvoker('previewCollectionMetadata'),
+  applyMetadata: makeHandlerInvoker('applyCollectionMetadata'),
+  updateGameDetails: makeHandlerInvoker('updateCollectionGameDetails'),
+  searchMetadata: makeHandlerInvoker('searchCollectionMetadata'),
+  startMetadataBulk: makeHandlerInvoker('startCollectionMetadataBulk'),
+  getMetadataBulkStatus: makeHandlerInvoker('getCollectionMetadataBulkStatus'),
+  cancelMetadataBulk: makeHandlerInvoker('cancelCollectionMetadataBulk'),
+  onMetadataBulkProgress: frontendListenerSlot('collectionMetadataBulkProgress'),
+  forceClearPlaying: makeHandlerInvoker('forceClearLocalPlaying'),
+  removeGame: makeHandlerInvoker('removeCollectionGame'),
+  getEmulationState: makeHandlerInvoker('getEmulationState'),
+  detectEmulators: makeHandlerInvoker('detectCollectionEmulators'),
+  addDetectedEmulators: makeHandlerInvoker('addDetectedEmulators'),
+  upsertEmulator: makeHandlerInvoker('upsertUserEmulator'),
+  removeEmulator: makeHandlerInvoker('removeUserEmulator'),
+  upsertRomScanner: makeHandlerInvoker('upsertRomScanner'),
+  removeRomScanner: makeHandlerInvoker('removeRomScanner'),
+  previewRomScan: makeHandlerInvoker('previewRomScan'),
+  importRomScan: makeHandlerInvoker('importRomScan'),
+  runRomScanners: makeHandlerInvoker('runRomScanners'),
+  setEmulatorLaunchRom: makeHandlerInvoker('setEmulatorLaunchRom')
 }

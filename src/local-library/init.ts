@@ -18,12 +18,15 @@ import {
 } from './art'
 import { searchCollectionWebImages } from './web-images'
 import { cacheSteamHero, warmSteamHeroes } from './heroes'
+import { forceClearLocalPlaying } from './playtime-watch'
+import { removeCollectionGame } from './remove'
 import { getSteamAppDetails } from './steam-details'
 import { initLocalArtProtocol } from './protocol'
 import { maybeRunScheduledBackup, runCollectionBackup } from './backup'
 import {
   getCollectionSettings,
   setCollectionBackupSettings,
+  setCollectionMetadataSettings,
   setCollectionUiSettings,
   setLudusaviSettings
 } from './settings'
@@ -43,6 +46,31 @@ import {
   getLocalGameMeta,
   getLocalSessions
 } from './stores'
+import {
+  applyGameMetadata,
+  cancelBulkMetadata,
+  getAllCollectionMetadata,
+  getBulkMetadataProgress,
+  getCollectionGameMetadata,
+  previewGameMetadata,
+  refreshMissingCollectionMetadata,
+  searchGameMetadata,
+  startBulkMetadata,
+  testIgdbCredentials,
+  updateCollectionGameDetails
+} from './metadata'
+import {
+  addDetectedEmulators,
+  autoScanRomFolders,
+  deleteRomScanner,
+  deleteUserEmulator,
+  getEmulationState,
+  importRoms,
+  saveRomScanner,
+  saveUserEmulator,
+  scanRomsPreview,
+  setEmulatorLaunchRom
+} from './emulation'
 
 let registered = false
 
@@ -119,6 +147,46 @@ export function registerLocalLibraryIpc() {
   addHandler('runLudusaviBackup', (_e, args) =>
     backupLudusaviForGame({ ...args, reason: 'manual' })
   )
+  addHandler('setCollectionMetadataSettings', async (_e, args) => {
+    const settings = setCollectionMetadataSettings(args)
+    const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
+    return { ...settings, ludusaviDetected }
+  })
+  addHandler('testIgdbCredentials', () => testIgdbCredentials())
+  addHandler('getAllCollectionMetadata', () => getAllCollectionMetadata())
+  addHandler('getCollectionGameMetadata', (_e, args) =>
+    getCollectionGameMetadata(args.runner, args.appName)
+  )
+  addHandler('previewCollectionMetadata', (_e, args) =>
+    previewGameMetadata(args)
+  )
+  addHandler('applyCollectionMetadata', (_e, args) => applyGameMetadata(args))
+  addHandler('updateCollectionGameDetails', (_e, args) =>
+    updateCollectionGameDetails(args)
+  )
+  addHandler('searchCollectionMetadata', (_e, args) => searchGameMetadata(args))
+  addHandler('startCollectionMetadataBulk', (_e, args) =>
+    startBulkMetadata(args)
+  )
+  addHandler('getCollectionMetadataBulkStatus', () => getBulkMetadataProgress())
+  addHandler('cancelCollectionMetadataBulk', () => cancelBulkMetadata())
+  addHandler('forceClearLocalPlaying', (_e, args) =>
+    forceClearLocalPlaying(args.appName, args.runner)
+  )
+  addHandler('removeCollectionGame', (_e, args) => removeCollectionGame(args))
+  addHandler('getEmulationState', (_e, refreshDetect) =>
+    getEmulationState(refreshDetect !== false)
+  )
+  addHandler('detectCollectionEmulators', () => getEmulationState(true))
+  addHandler('addDetectedEmulators', () => addDetectedEmulators())
+  addHandler('upsertUserEmulator', (_e, args) => saveUserEmulator(args))
+  addHandler('removeUserEmulator', (_e, id) => deleteUserEmulator(id))
+  addHandler('upsertRomScanner', (_e, args) => saveRomScanner(args))
+  addHandler('removeRomScanner', (_e, id) => deleteRomScanner(id))
+  addHandler('previewRomScan', (_e, args) => scanRomsPreview(args))
+  addHandler('importRomScan', (_e, args) => importRoms(args))
+  addHandler('runRomScanners', () => autoScanRomFolders())
+  addHandler('setEmulatorLaunchRom', (_e, args) => setEmulatorLaunchRom(args))
 }
 
 export async function initLocalLibrary() {
@@ -131,11 +199,13 @@ export async function initLocalLibrary() {
   ensureDefaultStatuses()
   backfillMissingGameStatuses()
   await refreshLocalInstallStates()
+  void autoScanRomFolders()
   void refreshMissingLocalCovers()
   void warmSteamHeroes(
     Object.values(getAllLocalGameMeta())
       .map((meta) => meta.steamAppId)
       .filter((id): id is string => Boolean(id))
   )
+  void refreshMissingCollectionMetadata()
   void maybeRunScheduledBackup()
 }

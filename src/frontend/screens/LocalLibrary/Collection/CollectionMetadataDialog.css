@@ -1,0 +1,138 @@
+.CollectionMetadataDialog {
+  min-width: min(800px, 92vw);
+}
+
+.CollectionMetadataDialog__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  width: min(840px, 90vw);
+  max-width: 840px;
+  height: min(620px, 70vh);
+  max-height: min(620px, 70vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.CollectionMetadataDialog__content * {
+  min-width: 0;
+}
+
+.CollectionMetadataDialog__help,
+.CollectionMetadataDialog__game {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.CollectionMetadataDialog__game {
+  color: var(--text-default);
+  font-weight: 600;
+}
+
+.CollectionMetadataDialog__warn {
+  margin: 0;
+  color: var(--warning, #e6b450);
+}
+
+.CollectionMetadataDialog__row,
+.CollectionMetadataDialog__search {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: end;
+}
+
+.CollectionMetadataDialog__search input {
+  flex: 1;
+  min-height: 38px;
+  padding: 0 0.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.24);
+  color: inherit;
+}
+
+.CollectionMetadataDialog__hits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.CollectionMetadataDialog__hits button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+}
+
+.CollectionMetadataDialog__hits button.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.CollectionMetadataDialog__compare {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.CollectionMetadataDialog__field h4 {
+  margin: 0 0 0.45rem;
+}
+
+.CollectionMetadataDialog__choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-xs);
+}
+
+.CollectionMetadataDialog__choices label {
+  display: flex;
+  gap: 0.45rem;
+  align-items: start;
+  padding: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.CollectionMetadataDialog__choices label.is-selected {
+  border-color: var(--accent);
+}
+
+.CollectionMetadataDialog__choices span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.CollectionMetadataDialog__choices strong {
+  font-size: 12px;
+}
+
+.CollectionMetadataDialog__choices em {
+  font-style: normal;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+  max-height: 4.2em;
+  overflow: hidden;
+}
+
+.CollectionMetadataDialog__choices img {
+  width: 72px;
+  height: 108px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.CollectionMetadataDialog__error {
+  margin: 0;
+  color: var(--danger, #e74c3c);
+}

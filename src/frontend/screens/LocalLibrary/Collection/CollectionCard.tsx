@@ -23,6 +23,7 @@ import {
   PlaylistRemove,
   Save,
   Settings,
+  TravelExplore,
   Upgrade,
   Visibility,
   VisibilityOff
@@ -30,6 +31,7 @@ import {
 import type { FavouriteGame, GameInfo, HiddenGame, Runner } from 'common/types'
 import type {
   CollectionGameArt,
+  CollectionGameMetadata,
   CompletionStatus,
   LocalGameMeta
 } from 'common/types/local-library'
@@ -58,8 +60,13 @@ import fallBackImage from 'frontend/assets/heroic_card.jpg'
 import { formatPlaytimeMinutes } from './playtime'
 import { STATUS_COLORS } from './statusColors'
 import CollectionContextMenu from './CollectionContextMenu'
+import CollectionMetadataDialog from './CollectionMetadataDialog'
+import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
 import { collectionCoverSrc } from './steamArt'
+import { collectionGameTitle } from './collectionTitle'
+import PickRomDialog from './PickRomDialog'
+import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
 import './CollectionCard.css'
 
 const storage: Storage = window.localStorage
@@ -68,22 +75,28 @@ type Props = {
   gameInfo: GameInfo
   meta?: LocalGameMeta
   collectionArt?: CollectionGameArt
+  metadata?: CollectionGameMetadata
   statuses: CompletionStatus[]
   isRecent?: boolean
   isFocused?: boolean
   onSelect: () => void
   onStatusChange: (statusId: string) => void
+  onMetadataChange: (metadata: CollectionGameMetadata) => void
+  onRemoved?: () => void
 }
 
 export default function CollectionCard({
   gameInfo: gameInfoFromProps,
   meta,
   collectionArt,
+  metadata,
   statuses,
   isRecent = false,
   isFocused = false,
   onSelect,
-  onStatusChange
+  onStatusChange,
+  onMetadataChange,
+  onRemoved
 }: Props) {
   const { t } = useTranslation('gamepage')
   const navigate = useNavigate()
@@ -92,7 +105,8 @@ export default function CollectionCard({
     favouriteGames,
     showDialogModal,
     connectivity,
-    gameUpdates
+    gameUpdates,
+    refreshLibrary
   } = useContext(ContextProvider)
   const { openGameSettingsModal, openGameLogsModal, openGameCategoriesModal } =
     useGlobalState.keys(
@@ -104,6 +118,8 @@ export default function CollectionCard({
   const [gameInfo, setGameInfo] = useState<GameInfo>(gameInfoFromProps)
   const [visible, setVisible] = useState(false)
   const [showUninstallModal, setShowUninstallModal] = useState(false)
+  const [metadataOpen, setMetadataOpen] = useState(false)
+  const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const {
     app_name: appName,
@@ -111,11 +127,12 @@ export default function CollectionCard({
     is_installed: isInstalled,
     install: gameInstallInfo
   } = { ...gameInfoFromProps }
-  const title = gameInfoFromProps.overrides?.title || gameInfoFromProps.title
+  const title = collectionGameTitle(gameInfoFromProps, metadata)
   const cover = collectionCoverSrc(
     gameInfoFromProps,
     collectionArt,
-    meta?.steamAppId
+    meta?.steamAppId,
+    metadata?.coverUrl
   )
 
   const currentStatusId = meta?.completionStatusId ?? 'not-played'
@@ -236,6 +253,66 @@ export default function CollectionCard({
       return
     }
     setShowUninstallModal(true)
+  }
+
+  function handleRemoveFromCollection() {
+    const removeGame = window.api.localLibrary.removeGame
+    if (typeof removeGame !== 'function') {
+      showDialogModal({
+        showDialog: true,
+        type: 'ERROR',
+        title: t('collection.remove.title', 'Remove from Collection'),
+        message: t(
+          'collection.remove.restart',
+          'Restart Heroic Local to load Remove from Collection.'
+        )
+      })
+      return
+    }
+
+    showDialogModal({
+      showDialog: true,
+      type: 'MESSAGE',
+      title: t('collection.remove.title', 'Remove from Collection'),
+      message: t(
+        'collection.remove.confirm',
+        'Remove {{title}} from Collection? This does not uninstall the game. Playtime, status, and Collection images for it are deleted.',
+        { title }
+      ),
+      buttons: [
+        {
+          text: t('box.yes'),
+          onClick: () => {
+            void (async () => {
+              const result = await removeGame({ appName, runner })
+              if (!result.ok) {
+                showDialogModal({
+                  showDialog: true,
+                  type: 'ERROR',
+                  title: t('collection.remove.title', 'Remove from Collection'),
+                  message:
+                    result.error ||
+                    t(
+                      'collection.remove.failed',
+                      'Could not remove this game from Collection.'
+                    )
+                })
+                return
+              }
+              hiddenGames.remove(appName)
+              favouriteGames.remove(appName)
+              timestampStore.delete(appName)
+              await refreshLibrary({
+                library: 'sideload',
+                runInBackground: true
+              })
+              onRemoved?.()
+            })()
+          }
+        },
+        { text: t('box.no') }
+      ]
+    })
   }
 
   async function handleLudusaviBackup() {
@@ -372,8 +449,19 @@ export default function CollectionCard({
       })
     }
 
-    if (isPlaying || isUpdating) {
+    if (isUpdating) {
       return sendKill(appName, playRunner)
+    }
+
+    if (isPlaying) {
+      confirmForceStopPlaying({
+        appName,
+        runner: playRunner,
+        title,
+        t,
+        showDialogModal
+      })
+      return
     }
 
     if (isQueued) {
@@ -382,6 +470,10 @@ export default function CollectionCard({
     }
 
     if (isInstalled) {
+      if (emulatorNeedsRomPick(meta)) {
+        setPickRomOpen(true)
+        return
+      }
       const isOffline = connectivity.status !== 'online'
       await launch({
         appName,
@@ -485,6 +577,39 @@ export default function CollectionCard({
           onClose={() => setShowUninstallModal(false)}
         />
       )}
+      {metadataOpen && (
+        <CollectionMetadataDialog
+          game={gameInfo}
+          title={title}
+          steamAppId={meta?.steamAppId}
+          metadata={metadata}
+          onChange={onMetadataChange}
+          onClose={() => setMetadataOpen(false)}
+        />
+      )}
+      {pickRomOpen && meta?.roms && (
+        <PickRomDialog
+          title={title}
+          roms={meta.roms}
+          selectedPath={meta.selectedRomPath}
+          onClose={() => setPickRomOpen(false)}
+          onPlay={(romPath) => {
+            setPickRomOpen(false)
+            void (async () => {
+              await prepareEmulatorLaunch(appName, romPath)
+              const isOffline = connectivity.status !== 'online'
+              await launch({
+                appName,
+                t,
+                runner,
+                hasUpdate,
+                showDialogModal,
+                notPlayableOffline: isOffline && !gameInfo.canRunOffline
+              })
+            })()
+          }}
+        />
+      )}
       <CollectionContextMenu
         statuses={statuses.map((item) => ({
           id: item.id,
@@ -546,6 +671,12 @@ export default function CollectionCard({
             icon: <Settings />
           },
           {
+            label: t('collection.metadata.title', 'Collection metadata'),
+            onclick: () => setMetadataOpen(true),
+            show: true,
+            icon: <TravelExplore />
+          },
+          {
             label: t('submenu.logs', 'Logs'),
             onclick: () => openGameLogsModal(gameInfo),
             show: isInstalled && !isUninstalling && !isBrowserGame,
@@ -605,6 +736,12 @@ export default function CollectionCard({
             label: t('button.uninstall'),
             onclick: handleUninstall,
             show: isInstalled && !isUpdating && !isPlaying,
+            icon: <DeleteForever />
+          },
+          {
+            label: t('collection.remove.title', 'Remove from Collection'),
+            onclick: handleRemoveFromCollection,
+            show: isSideloaded && !isPlaying && !isUpdating,
             icon: <DeleteForever />
           }
         ]}

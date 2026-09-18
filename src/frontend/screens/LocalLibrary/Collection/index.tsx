@@ -10,11 +10,20 @@ import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 import { faSearch } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Menu, MenuOpen, Settings } from '@mui/icons-material'
+import {
+  Menu,
+  MenuOpen,
+  Settings,
+  CloudDownload,
+  SportsEsports
+} from '@mui/icons-material'
 import type { GameInfo } from 'common/types'
 import type {
   CollectionGameArt,
+  CollectionGameMetadata,
+  CollectionMetadataBulkProgress,
   CompletionStatus,
+  CoverAspectPreset,
   LocalGameMeta
 } from 'common/types/local-library'
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -23,20 +32,49 @@ import { configStore, timestampStore } from 'frontend/helpers/electronStores'
 import CollectionCard from './CollectionCard'
 import CollectionFocus from './CollectionFocus'
 import CollectionSettingsDialog from './CollectionSettingsDialog'
+import CollectionMetadataWizard from './CollectionMetadataWizard'
+import ScanRomsDialog from './ScanRomsDialog'
 import InstallFilterMenu, { type InstallFilter } from './InstallFilterMenu'
+import FacetFilterMenu from './FacetFilterMenu'
 import PlayniteMenu from './PlayniteMenu'
 import SortMenu, { type CollectionSort } from './SortMenu'
 import StatusMenu from './StatusMenu'
 import { STATUS_COLORS } from './statusColors'
-import { collectionArtKey, collectionStageArt } from './steamArt'
+import {
+  collectFacetOptions,
+  EMPTY_FACET_FILTERS,
+  hasFacetFilters,
+  matchesFacets,
+  toggleFacetFilter,
+  type CollectionFacetFilters,
+  type CollectionFacetKind
+} from './collectionFacets'
+import {
+  collectionArtKey,
+  collectionMetadataKey,
+  collectionStageArt
+} from './steamArt'
+import { collectionGameTitle } from './collectionTitle'
+import { collectTagOptions } from './collectionTags'
 import './index.css'
 
 const INSTALL_FILTER_KEY = 'collection_install_filter'
+const FACET_FILTER_KEY = 'collection_facet_filter'
 const SORT_KEY = 'collection_sort'
 const SIDEBAR_HIDDEN_KEY = 'collection_sidebar_hidden'
 const COLLAPSED_GROUPS_KEY = 'collection_collapsed_groups'
 const FOCUSED_GAME_KEY = 'collection_focused_game'
 const UNKNOWN_GROUP_ID = 'ungrouped'
+const EMPTY_BULK: CollectionMetadataBulkProgress = {
+  state: 'idle',
+  total: 0,
+  processed: 0,
+  updated: 0,
+  skipped: 0,
+  failed: 0,
+  percent: 0,
+  errors: []
+}
 const storage: Storage = window.localStorage
 const SIDEBAR_HIDDEN_CLASS = 'collectionSidebarHidden'
 
@@ -58,6 +96,32 @@ function readInstallFilter(): InstallFilter {
     return stored
   }
   return 'all'
+}
+
+function readFacetFilters(): CollectionFacetFilters {
+  try {
+    const stored = storage.getItem(FACET_FILTER_KEY)
+    if (!stored) return { ...EMPTY_FACET_FILTERS }
+    const parsed: unknown = JSON.parse(stored)
+    if (!parsed || typeof parsed !== 'object') return { ...EMPTY_FACET_FILTERS }
+    const value = parsed as Record<string, unknown>
+    const text = (key: CollectionFacetKind) =>
+      typeof value[key] === 'string' && value[key] ? value[key] : null
+    return {
+      series: text('series'),
+      developer: text('developer'),
+      publisher: text('publisher'),
+      genre: text('genre'),
+      platform: text('platform')
+    }
+  } catch {
+    return { ...EMPTY_FACET_FILTERS }
+  }
+}
+
+function persistFacetFilters(next: CollectionFacetFilters) {
+  if (!hasFacetFilters(next)) storage.removeItem(FACET_FILTER_KEY)
+  else storage.setItem(FACET_FILTER_KEY, JSON.stringify(next))
 }
 
 function readSort(): CollectionSort {
@@ -111,19 +175,53 @@ function lastPlayedAt(appName: string): string {
   return timestampStore.get_nodefault(appName)?.lastPlayed ?? ''
 }
 
+function sameIdSet(left: Set<string>, right: Set<string>) {
+  if (left.size !== right.size) return false
+  for (const id of left) {
+    if (!right.has(id)) return false
+  }
+  return true
+}
+
+function readStuckGroupIds(root: HTMLElement) {
+  const rootTop = root.getBoundingClientRect().top
+  const next = new Set<string>()
+  root.querySelectorAll<HTMLElement>('.collection__group').forEach((group) => {
+    const id = group.dataset.groupId
+    const toggle = group.querySelector<HTMLElement>('.collection__groupToggle')
+    if (!id || !toggle) return
+    const groupTop = group.getBoundingClientRect().top
+    const toggleTop = toggle.getBoundingClientRect().top
+    if (groupTop < rootTop - 2 && toggleTop <= rootTop + 1) {
+      next.add(id)
+    }
+  })
+  return next
+}
+
 export default function Collection() {
   const { t } = useTranslation()
-  const { epic, gog, amazon, zoom, sideloadedLibrary, allTilesInColor } =
-    useContext(ContextProvider)
+  const {
+    epic,
+    gog,
+    amazon,
+    zoom,
+    sideloadedLibrary,
+    allTilesInColor,
+    hiddenGames
+  } = useContext(ContextProvider)
   const [search, setSearch] = useState('')
   const [installFilter, setInstallFilter] =
     useState<InstallFilter>(readInstallFilter)
+  const [facetFilters, setFacetFilters] =
+    useState<CollectionFacetFilters>(readFacetFilters)
   const [sort, setSort] = useState<CollectionSort>(readSort)
   const [statuses, setStatuses] = useState<CompletionStatus[]>([])
   const [metas, setMetas] = useState<Record<string, LocalGameMeta>>({})
   const [groupByStatus, setGroupByStatus] = useState(true)
   const [collapsedGroups, setCollapsedGroups] =
     useState<Set<string>>(readCollapsedGroups)
+  const [stuckGroups, setStuckGroups] = useState<Set<string>>(() => new Set())
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [greyUninstalledGames, setGreyUninstalledGames] = useState(true)
   const [sidebarHidden, setSidebarHidden] = useState(readSidebarHidden)
@@ -132,6 +230,20 @@ export default function Collection() {
   const [collectionArt, setCollectionArt] = useState<
     Record<string, CollectionGameArt>
   >({})
+  const [collectionMetadata, setCollectionMetadata] = useState<
+    Record<string, CollectionGameMetadata>
+  >({})
+  const [coverAspect, setCoverAspect] = useState<CoverAspectPreset>('steam')
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [scanOpen, setScanOpen] = useState(false)
+  const [scanSeed, setScanSeed] = useState<{
+    emulatorId?: string
+    profileId?: string
+    directory?: string
+  }>({})
+  const [bulkProgress, setBulkProgress] =
+    useState<CollectionMetadataBulkProgress>(EMPTY_BULK)
+  const [bulkDismissed, setBulkDismissed] = useState(true)
   const [recentAppNames, setRecentAppNames] = useState<Set<string>>(
     () => new Set()
   )
@@ -144,6 +256,19 @@ export default function Collection() {
   function handleInstallFilter(next: InstallFilter) {
     storage.setItem(INSTALL_FILTER_KEY, next)
     setInstallFilter(next)
+  }
+
+  function handleFacetFilter(kind: CollectionFacetKind, value: string) {
+    setFacetFilters((current) => {
+      const next = toggleFacetFilter(current, kind, value)
+      persistFacetFilters(next)
+      return next
+    })
+  }
+
+  function handleClearFacets() {
+    persistFacetFilters({ ...EMPTY_FACET_FILTERS })
+    setFacetFilters({ ...EMPTY_FACET_FILTERS })
   }
 
   function handleSort(next: CollectionSort) {
@@ -162,20 +287,43 @@ export default function Collection() {
   }
 
   async function reload() {
-    const [nextStatuses, nextMetas, nextArt, nextSettings] = await Promise.all([
-      window.api.localLibrary.getStatuses(),
-      window.api.localLibrary.getAllMeta(),
-      window.api.localLibrary.getAllCollectionArt(),
-      window.api.localLibrary.getSettings()
-    ])
+    const [nextStatuses, nextMetas, nextArt, nextSettings, nextMetadata] =
+      await Promise.all([
+        window.api.localLibrary.getStatuses(),
+        window.api.localLibrary.getAllMeta(),
+        window.api.localLibrary.getAllCollectionArt(),
+        window.api.localLibrary.getSettings(),
+        window.api.localLibrary.getAllMetadata()
+      ])
     setStatuses(nextStatuses)
     setMetas(nextMetas)
     setCollectionArt(nextArt)
+    setCollectionMetadata(nextMetadata)
     setGreyUninstalledGames(nextSettings.greyUninstalledGames !== false)
+    setCoverAspect(nextSettings.metadata?.coverAspect || 'steam')
   }
 
   useEffect(() => {
     void reload()
+  }, [sideloadedLibrary])
+
+  useEffect(() => {
+    void window.api.localLibrary.getMetadataBulkStatus().then((next) => {
+      setBulkProgress(next)
+      if (next.state === 'running' || next.state === 'cancelling') {
+        setBulkDismissed(false)
+      }
+    })
+    const remove = window.api.localLibrary.onMetadataBulkProgress(
+      (_event, next) => {
+        setBulkProgress(next)
+        if (next.state === 'running' || next.state === 'cancelling') {
+          setBulkDismissed(false)
+        }
+        if (next.state === 'done') void reload()
+      }
+    )
+    return () => remove()
   }, [])
 
   useEffect(() => {
@@ -202,13 +350,13 @@ export default function Collection() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (settingsOpen) return
+        if (settingsOpen || wizardOpen || scanOpen) return
         setFocusedKey(null)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [settingsOpen])
+  }, [settingsOpen, wizardOpen, scanOpen])
 
   const games = useMemo(() => {
     const all: GameInfo[] = [
@@ -218,10 +366,12 @@ export default function Collection() {
       ...amazon.library,
       ...zoom.library
     ]
+    const hiddenAppNames = new Set(hiddenGames.list.map((game) => game.appName))
     const seen = new Set<string>()
     const unique: GameInfo[] = []
     for (const game of all) {
       if (game.install?.is_dlc) continue
+      if (hiddenAppNames.has(game.app_name)) continue
       const key = `${game.runner}_${game.app_name}`
       if (seen.has(key)) continue
       seen.add(key)
@@ -233,16 +383,25 @@ export default function Collection() {
     epic.library,
     gog.library,
     amazon.library,
-    zoom.library
+    zoom.library,
+    hiddenGames.list
   ])
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     const next = games.filter((game) => {
-      if (query && !game.title.toLowerCase().includes(query)) return false
-      if (installFilter === 'installed') return game.is_installed
-      if (installFilter === 'uninstalled') return !game.is_installed
-      return true
+      const title = collectionGameTitle(
+        game,
+        collectionMetadata[collectionMetadataKey(game.runner, game.app_name)]
+      )
+      if (query && !title.toLowerCase().includes(query)) return false
+      if (installFilter === 'installed' && !game.is_installed) return false
+      if (installFilter === 'uninstalled' && game.is_installed) return false
+      return matchesFacets(
+        game,
+        collectionMetadata[collectionMetadataKey(game.runner, game.app_name)],
+        facetFilters
+      )
     })
 
     return next.sort((a, b) => {
@@ -260,9 +419,37 @@ export default function Collection() {
           if (delta) return delta
         }
       }
-      return a.title.localeCompare(b.title)
+      return collectionGameTitle(
+        a,
+        collectionMetadata[collectionMetadataKey(a.runner, a.app_name)]
+      ).localeCompare(
+        collectionGameTitle(
+          b,
+          collectionMetadata[collectionMetadataKey(b.runner, b.app_name)]
+        )
+      )
     })
-  }, [games, search, installFilter, sort])
+  }, [games, search, installFilter, sort, collectionMetadata, facetFilters])
+
+  const facetOptions = useMemo(
+    () =>
+      collectFacetOptions(
+        games,
+        (game) =>
+          collectionMetadata[collectionMetadataKey(game.runner, game.app_name)]
+      ),
+    [games, collectionMetadata]
+  )
+
+  const tagOptions = useMemo(
+    () =>
+      collectTagOptions(
+        games,
+        (game) =>
+          collectionMetadata[collectionMetadataKey(game.runner, game.app_name)]
+      ),
+    [games, collectionMetadata]
+  )
 
   const grouped = useMemo(() => {
     const buckets = new Map<string, GameInfo[]>()
@@ -293,6 +480,9 @@ export default function Collection() {
         paintedMeta?.steamAppId ? heroCache[paintedMeta.steamAppId] : undefined,
         collectionArt[
           collectionArtKey(paintedGame.runner, paintedGame.app_name)
+        ]?.heroUrl,
+        collectionMetadata[
+          collectionMetadataKey(paintedGame.runner, paintedGame.app_name)
         ]?.heroUrl
       )
     : null
@@ -359,7 +549,45 @@ export default function Collection() {
     metas,
     sort,
     focusedKey,
-    collapsedGroups
+    collapsedGroups,
+    facetFilters
+  ])
+
+  useEffect(() => {
+    if (!groupByStatus) {
+      setStuckGroups((current) => (current.size ? new Set() : current))
+      return
+    }
+    const root = listRef.current
+    if (!root) return
+
+    let frame = 0
+    const update = () => {
+      const next = readStuckGroupIds(root)
+      setStuckGroups((current) => (sameIdSet(current, next) ? current : next))
+    }
+    const onScroll = () => {
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        update()
+      })
+    }
+
+    root.addEventListener('scroll', onScroll, { passive: true })
+    update()
+    return () => {
+      root.removeEventListener('scroll', onScroll)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
+  }, [
+    filtered,
+    groupByStatus,
+    statuses,
+    metas,
+    sort,
+    collapsedGroups,
+    facetFilters
   ])
 
   useEffect(() => {
@@ -394,6 +622,15 @@ export default function Collection() {
         collectionArt={
           collectionArt[collectionArtKey(game.runner, game.app_name)]
         }
+        metadata={
+          collectionMetadata[collectionMetadataKey(game.runner, game.app_name)]
+        }
+        onMetadataChange={(next) => {
+          setCollectionMetadata((current) => ({
+            ...current,
+            [collectionMetadataKey(game.runner, game.app_name)]: next
+          }))
+        }}
         statuses={statuses}
         isRecent={recentAppNames.has(game.app_name)}
         isFocused={focusedKey === gameKey(game)}
@@ -403,6 +640,14 @@ export default function Collection() {
           setFocusedKey(key)
         }}
         onStatusChange={(statusId) => handleStatusChange(game, statusId)}
+        onRemoved={() => {
+          void reload()
+          setFocusedKey((current) => {
+            if (current !== gameKey(game)) return current
+            storage.removeItem(FOCUSED_GAME_KEY)
+            return null
+          })
+        }}
       />
     ))
   }
@@ -413,6 +658,7 @@ export default function Collection() {
         allTilesInColor,
         'collection--greyUninstalled': greyUninstalledGames
       })}
+      data-cover-aspect={coverAspect}
     >
       {paintedArt && (
         <div className="collection__stage" aria-hidden>
@@ -467,6 +713,12 @@ export default function Collection() {
               onChange={(event) => handleSearch(event.target.value)}
             />
           </label>
+          <FacetFilterMenu
+            filters={facetFilters}
+            options={facetOptions}
+            onChange={handleFacetFilter}
+            onClear={handleClearFacets}
+          />
           <SortMenu value={sort} onChange={handleSort} />
           <StatusMenu
             groupByStatus={groupByStatus}
@@ -475,7 +727,42 @@ export default function Collection() {
           />
         </div>
         <div className="collection__toolbarRight">
+          {(bulkProgress.state === 'running' ||
+            bulkProgress.state === 'cancelling' ||
+            (bulkProgress.state === 'done' && !bulkDismissed)) && (
+            <button
+              type="button"
+              className="collection__toolBtn collection__bulkBtn"
+              title={t('collection.metadata.wizard.title', 'Download metadata')}
+              aria-label={t(
+                'collection.metadata.wizard.title',
+                'Download metadata'
+              )}
+              onClick={() => {
+                setBulkDismissed(false)
+                setWizardOpen(true)
+              }}
+            >
+              <CloudDownload />
+              <span>{bulkProgress.percent}%</span>
+            </button>
+          )}
           <PlayniteMenu onLibraryChanged={() => void reload()} />
+          <button
+            type="button"
+            className="collection__toolBtn"
+            title={t('collection.emulation.scanTitle', 'Add emulated games')}
+            aria-label={t(
+              'collection.emulation.scanTitle',
+              'Add emulated games'
+            )}
+            onClick={() => {
+              setScanSeed({})
+              setScanOpen(true)
+            }}
+          >
+            <SportsEsports />
+          </button>
           <button
             type="button"
             className="collection__toolBtn"
@@ -497,13 +784,16 @@ export default function Collection() {
               return (
                 <section
                   key={status.id}
+                  data-group-id={status.id}
                   className={classNames('collection__group', {
                     'is-collapsed': collapsedGroups.has(status.id)
                   })}
                 >
                   <button
                     type="button"
-                    className="collection__groupToggle"
+                    className={classNames('collection__groupToggle', {
+                      'is-stuck': stuckGroups.has(status.id)
+                    })}
                     aria-expanded={!collapsedGroups.has(status.id)}
                     onClick={() => toggleGroup(status.id)}
                   >
@@ -525,13 +815,16 @@ export default function Collection() {
           )}
           {groupByStatus && grouped.unknown.length > 0 && (
             <section
+              data-group-id={UNKNOWN_GROUP_ID}
               className={classNames('collection__group', {
                 'is-collapsed': collapsedGroups.has(UNKNOWN_GROUP_ID)
               })}
             >
               <button
                 type="button"
-                className="collection__groupToggle"
+                className={classNames('collection__groupToggle', {
+                  'is-stuck': stuckGroups.has(UNKNOWN_GROUP_ID)
+                })}
                 aria-expanded={!collapsedGroups.has(UNKNOWN_GROUP_ID)}
                 onClick={() => toggleGroup(UNKNOWN_GROUP_ID)}
               >
@@ -556,12 +849,36 @@ export default function Collection() {
                 ]
               : undefined
           }
+          metadata={
+            paintedGame
+              ? collectionMetadata[
+                  collectionMetadataKey(
+                    paintedGame.runner,
+                    paintedGame.app_name
+                  )
+                ]
+              : undefined
+          }
+          onMetadataChange={(next) => {
+            if (!paintedGame) return
+            setCollectionMetadata((current) => ({
+              ...current,
+              [collectionMetadataKey(paintedGame.runner, paintedGame.app_name)]:
+                next
+            }))
+          }}
+          onMetaChange={(next) => {
+            setMetas((current) => ({ ...current, [next.appName]: next }))
+          }}
           cachedHeroUrl={
             paintedMeta?.steamAppId
               ? heroCache[paintedMeta.steamAppId]
               : undefined
           }
           statuses={statuses}
+          facetFilters={facetFilters}
+          onFacetFilter={handleFacetFilter}
+          tagOptions={tagOptions}
           onArtChange={(next) => {
             if (!paintedGame) return
             const key = collectionArtKey(
@@ -585,6 +902,49 @@ export default function Collection() {
           onClose={() => setSettingsOpen(false)}
           onSettingsChange={(next) => {
             setGreyUninstalledGames(next.greyUninstalledGames !== false)
+            setCoverAspect(next.metadata?.coverAspect || 'steam')
+          }}
+          onOpenMetadataWizard={() => {
+            setSettingsOpen(false)
+            setBulkDismissed(false)
+            setWizardOpen(true)
+          }}
+          onOpenScan={(seed) => {
+            setScanSeed(seed ?? {})
+            setScanOpen(true)
+          }}
+        />
+      )}
+      {scanOpen && (
+        <ScanRomsDialog
+          initialEmulatorId={scanSeed.emulatorId}
+          initialProfileId={scanSeed.profileId}
+          initialDirectory={scanSeed.directory}
+          onClose={() => setScanOpen(false)}
+          onImported={() => void reload()}
+        />
+      )}
+      {wizardOpen && (
+        <CollectionMetadataWizard
+          games={filtered.map((game) => ({
+            appName: game.app_name,
+            runner: game.runner === 'zoom' ? 'sideload' : game.runner,
+            title: collectionGameTitle(
+              game,
+              collectionMetadata[
+                collectionMetadataKey(game.runner, game.app_name)
+              ]
+            ),
+            steamAppId: metas[game.app_name]?.steamAppId
+          }))}
+          progress={bulkProgress}
+          onProgress={(next) => {
+            setBulkProgress(next)
+            setBulkDismissed(false)
+          }}
+          onHide={() => {
+            setWizardOpen(false)
+            if (bulkProgress.state === 'done') setBulkDismissed(true)
           }}
         />
       )}
