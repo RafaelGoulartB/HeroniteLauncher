@@ -46,6 +46,7 @@ import { collectionCoverSrc, collectionStageArt } from './steamArt'
 import { sanitizeSteamDescription } from './steamHtml'
 import CollectionGameArtDialog from './CollectionGameArtDialog'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
+import CollectionScreenshots from './CollectionScreenshots'
 import PickRomDialog from './PickRomDialog'
 import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
 import { collectionGameTitle } from './collectionTitle'
@@ -83,6 +84,7 @@ type Props = {
   onMetadataChange: (metadata: CollectionGameMetadata) => void
   onMetaChange?: (meta: LocalGameMeta) => void
   onClose: () => void
+  screenshotsFolder?: string
 }
 
 function splitNames(value?: string) {
@@ -199,7 +201,8 @@ export default function CollectionFocus({
   onArtChange,
   onMetadataChange,
   onMetaChange,
-  onClose
+  onClose,
+  screenshotsFolder
 }: Props) {
   const { t } = useTranslation()
   if (!game) {
@@ -226,6 +229,7 @@ export default function CollectionFocus({
       onMetadataChange={onMetadataChange}
       onMetaChange={onMetaChange}
       onClose={onClose}
+      screenshotsFolder={screenshotsFolder}
     />
   )
 }
@@ -243,7 +247,8 @@ function CollectionFocusPanel({
   onArtChange,
   onMetadataChange,
   onMetaChange,
-  onClose
+  onClose,
+  screenshotsFolder
 }: {
   game: GameInfo
   meta?: LocalGameMeta
@@ -258,6 +263,7 @@ function CollectionFocusPanel({
   onMetadataChange: (metadata: CollectionGameMetadata) => void
   onMetaChange?: (meta: LocalGameMeta) => void
   onClose: () => void
+  screenshotsFolder?: string
 }) {
   const { t } = useTranslation()
   const { t: tGame } = useTranslation('gamepage')
@@ -577,20 +583,30 @@ function CollectionFocusPanel({
         </header>
 
         <div className="collectionFocus__body">
-          <section className="collectionFocus__overview">
-            <h3>{t('collection.focus.overview', 'Overview')}</h3>
-            {descriptionHtml ? (
-              <div
-                className="collectionFocus__html"
-                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-              />
-            ) : (
-              <p>
-                {description ||
-                  tGame('generic.noDescription', 'No description available')}
-              </p>
-            )}
-          </section>
+          <div className="collectionFocus__main">
+            <CollectionScreenshots
+              title={title}
+              steamAppId={storeAppId}
+              aliases={[gameInfo.title, gameInfo.folder_name].filter(
+                (item): item is string => Boolean(item && item !== title)
+              )}
+              screenshotsFolder={screenshotsFolder}
+            />
+            <section className="collectionFocus__overview">
+              <h3>{t('collection.focus.overview', 'Overview')}</h3>
+              {descriptionHtml ? (
+                <div
+                  className="collectionFocus__html"
+                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                />
+              ) : (
+                <p>
+                  {description ||
+                    tGame('generic.noDescription', 'No description available')}
+                </p>
+              )}
+            </section>
+          </div>
 
           <div className="collectionFocus__aside">
             {achievements.length > 0 && (

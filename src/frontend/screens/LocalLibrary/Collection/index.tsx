@@ -224,6 +224,7 @@ export default function Collection() {
   const [stuckGroups, setStuckGroups] = useState<Set<string>>(() => new Set())
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [greyUninstalledGames, setGreyUninstalledGames] = useState(true)
+  const [screenshotsFolder, setScreenshotsFolder] = useState('')
   const [sidebarHidden, setSidebarHidden] = useState(readSidebarHidden)
   const [focusedKey, setFocusedKey] = useState<string | null>(readFocusedKey)
   const [heroCache, setHeroCache] = useState<Record<string, string>>({})
@@ -300,6 +301,7 @@ export default function Collection() {
     setCollectionArt(nextArt)
     setCollectionMetadata(nextMetadata)
     setGreyUninstalledGames(nextSettings.greyUninstalledGames !== false)
+    setScreenshotsFolder(nextSettings.screenshots?.folder ?? '')
     setCoverAspect(nextSettings.metadata?.coverAspect || 'steam')
   }
 
@@ -895,6 +897,7 @@ export default function Collection() {
             })
           }}
           onClose={() => setFocusedKey(null)}
+          screenshotsFolder={screenshotsFolder}
         />
       </div>
       {settingsOpen && (
@@ -903,6 +906,7 @@ export default function Collection() {
           onSettingsChange={(next) => {
             setGreyUninstalledGames(next.greyUninstalledGames !== false)
             setCoverAspect(next.metadata?.coverAspect || 'steam')
+            setScreenshotsFolder(next.screenshots?.folder ?? '')
           }}
           onOpenMetadataWizard={() => {
             setSettingsOpen(false)

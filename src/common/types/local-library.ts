@@ -602,11 +602,29 @@ export interface IgdbCredentialTest {
   error?: string
 }
 
+export interface CollectionScreenshot {
+  id: string
+  name: string
+  url: string
+  takenAt?: number
+}
+
+export interface CollectionScreenshotsResult {
+  folder?: string
+  matchedFolder?: string
+  items: CollectionScreenshot[]
+}
+
+export interface CollectionScreenshotsSettings {
+  folder: string
+}
+
 export interface CollectionSettings {
   backup: CollectionBackupSettings
   ludusavi: LudusaviSettings
   ludusaviDetected?: LudusaviDetectedConfig
   greyUninstalledGames: boolean
+  screenshots: CollectionScreenshotsSettings
   metadata: CollectionMetadataSettings
 }
 

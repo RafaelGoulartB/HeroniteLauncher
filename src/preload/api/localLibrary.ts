@@ -25,6 +25,8 @@ export const localLibrary = {
   clearGameArt: makeHandlerInvoker('clearCollectionGameArt'),
   getSettings: makeHandlerInvoker('getCollectionSettings'),
   setUiSettings: makeHandlerInvoker('setCollectionUiSettings'),
+  setScreenshotsSettings: makeHandlerInvoker('setCollectionScreenshotsSettings'),
+  getScreenshots: makeHandlerInvoker('getCollectionScreenshots'),
   setBackupSettings: makeHandlerInvoker('setCollectionBackupSettings'),
   runBackup: makeHandlerInvoker('runCollectionBackup'),
   setLudusaviSettings: makeHandlerInvoker('setLudusaviSettings'),

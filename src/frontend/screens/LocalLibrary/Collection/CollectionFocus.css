@@ -164,19 +164,22 @@
   align-items: start;
 }
 
-.collectionFocus__overview h3,
-.collectionFocus__panel h3,
-.collectionFocus__details > h3 {
-  margin: 0 0 0.7rem;
-  font-size: 1.05rem;
-  font-weight: 650;
-  color: #fff;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
+.collectionFocus__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
 }
 
-.collectionFocus__details > h3 {
-  margin: 0 0 0.55rem 0.2rem;
+.collectionFocus__overview h3,
+.collectionFocus__panel h3,
+.collectionFocus__details > h3,
+.collectionScreenshots > h3 {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
   font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
 }
 
 .collectionFocus__overview p,

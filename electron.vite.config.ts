@@ -16,6 +16,8 @@ const dependenciesToNotExternalize = [
   '@xhmikosr/decompress-unzip'
 ]
 
+const optionalNativeDeps = ['ws', 'bufferutil', 'utf-8-validate']
+
 export default defineConfig(({ mode }) => ({
   main: {
     build: {
@@ -31,7 +33,12 @@ export default defineConfig(({ mode }) => ({
       sourcemap: 'inline'
     },
     resolve: { alias: srcAliases },
-    plugins: [externalizeDepsPlugin({ exclude: dependenciesToNotExternalize })]
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: dependenciesToNotExternalize,
+        include: optionalNativeDeps
+      })
+    ]
   },
   preload: {
     build: {
@@ -50,7 +57,12 @@ export default defineConfig(({ mode }) => ({
       sourcemap: mode === 'development' ? 'inline' : false
     },
     resolve: { alias: srcAliases },
-    plugins: [externalizeDepsPlugin({ exclude: dependenciesToNotExternalize })]
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: dependenciesToNotExternalize,
+        include: optionalNativeDeps
+      })
+    ]
   },
   renderer: {
     root: '.',

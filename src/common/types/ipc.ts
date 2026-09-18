@@ -75,6 +75,7 @@ import type {
   CollectionBackupInterval,
   CollectionBackupResult,
   CollectionSettings,
+  CollectionScreenshotsResult,
   LudusaviBackupResult,
   LudusaviSettings,
   CollectionGameDetailsPatch,
@@ -324,6 +325,14 @@ interface AsyncIPCFunctions {
   setCollectionUiSettings: (args: {
     greyUninstalledGames: boolean
   }) => Promise<CollectionSettings>
+  setCollectionScreenshotsSettings: (args: {
+    folder: string
+  }) => Promise<CollectionSettings>
+  getCollectionScreenshots: (args: {
+    title: string
+    steamAppId?: string
+    aliases?: string[]
+  }) => Promise<CollectionScreenshotsResult>
   setCollectionBackupSettings: (args: {
     folder: string
     interval: CollectionBackupInterval

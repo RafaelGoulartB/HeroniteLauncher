@@ -86,6 +86,7 @@ export default function CollectionSettingsDialog({
   const [folder, setFolder] = useState('')
   const [interval, setInterval] = useState<CollectionBackupInterval>('weekly')
   const [greyUninstalledGames, setGreyUninstalledGames] = useState(true)
+  const [screenshotsFolder, setScreenshotsFolder] = useState('')
   const [ludusaviEnabled, setLudusaviEnabled] = useState(false)
   const [useInstalledConfig, setUseInstalledConfig] = useState(true)
   const [ludusaviBinary, setLudusaviBinary] = useState('')
@@ -118,6 +119,7 @@ export default function CollectionSettingsDialog({
     setLudusaviFormat(next.ludusavi.format)
     setLudusaviCompression(next.ludusavi.compression)
     setGreyUninstalledGames(next.greyUninstalledGames !== false)
+    setScreenshotsFolder(next.screenshots?.folder ?? '')
     setIgdbClientId(next.metadata.igdbClientId)
     setIgdbClientSecret(next.metadata.igdbClientSecret)
     setCoverAspect(next.metadata.coverAspect)
@@ -139,6 +141,23 @@ export default function CollectionSettingsDialog({
       })
       setSettings(next)
       setGreyUninstalledGames(next.greyUninstalledGames)
+      onSettingsChange?.(next)
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function persistScreenshots(nextFolder = screenshotsFolder) {
+    setSaving(true)
+    setError('')
+    try {
+      const next = await window.api.localLibrary.setScreenshotsSettings({
+        folder: nextFolder
+      })
+      setSettings(next)
+      setScreenshotsFolder(next.screenshots.folder)
       onSettingsChange?.(next)
     } catch (err) {
       setError(String(err))
@@ -369,6 +388,34 @@ export default function CollectionSettingsDialog({
                 'Uninstalled covers appear grey. Turn this off to keep their original colour.'
               )}
             </p>
+          </section>
+          <section className="CollectionSettingsDialog__section">
+            <h5 className="CollectionSettingsDialog__subheading">
+              {t('collection.settings.screenshotsHeading', 'Screenshots')}
+            </h5>
+            <p className="CollectionSettingsDialog__meta">
+              {t(
+                'collection.settings.screenshotsHelp',
+                'Folder with a subfolder per game (Xbox Game Bar Captures, NVIDIA, etc.). Collection matches those names to the selected game even when they are not identical.'
+              )}
+            </p>
+            <PathSelectionBox
+              htmlId="collection-screenshots-folder"
+              type="directory"
+              path={screenshotsFolder}
+              onPathChange={(next) => {
+                setScreenshotsFolder(next)
+                void persistScreenshots(next)
+              }}
+              label={t(
+                'collection.settings.screenshotsFolder',
+                'Screenshots folder'
+              )}
+              pathDialogTitle={t(
+                'collection.settings.screenshotsFolder',
+                'Screenshots folder'
+              )}
+            />
           </section>
         </TabPanel>
 

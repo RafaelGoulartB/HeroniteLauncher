@@ -296,7 +296,15 @@
             "uninstalled": "Not installed / Uninstalled"
         },
         "focus": {
-            "notes": "Notes"
+            "notes": "Notes",
+            "screenshots": "Screenshots",
+            "screenshotsFit": "Fit to screen",
+            "screenshotsFitExit": "Exit fit to screen",
+            "screenshotsMore": "View all screenshots",
+            "screenshotsMoreCount_one": "+{{count}}",
+            "screenshotsMoreCount_other": "+{{count}}",
+            "screenshotsNext": "Next screenshot",
+            "screenshotsPrev": "Previous screenshot"
         },
         "gameArt": {
             "change": "Change",
@@ -466,6 +474,9 @@
             "ludusaviSimple": "Simple folder",
             "ludusaviUseConfig": "Use installed Ludusavi settings (path, zip, compression)",
             "ludusaviZip": "Zip",
+            "screenshotsFolder": "Screenshots folder",
+            "screenshotsHeading": "Screenshots",
+            "screenshotsHelp": "Folder with a subfolder per game (Xbox Game Bar Captures, NVIDIA, etc.). Collection matches those names to the selected game even when they are not identical.",
             "tab": {
                 "appearance": "Appearance",
                 "backup": "Backup",

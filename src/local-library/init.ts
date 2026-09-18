@@ -27,6 +27,7 @@ import {
   getCollectionSettings,
   setCollectionBackupSettings,
   setCollectionMetadataSettings,
+  setCollectionScreenshotsSettings,
   setCollectionUiSettings,
   setLudusaviSettings
 } from './settings'
@@ -71,6 +72,7 @@ import {
   scanRomsPreview,
   setEmulatorLaunchRom
 } from './emulation'
+import { getCollectionScreenshots } from './screenshots'
 
 let registered = false
 
@@ -131,6 +133,14 @@ export function registerLocalLibraryIpc() {
     const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
     return { ...settings, ludusaviDetected }
   })
+  addHandler('setCollectionScreenshotsSettings', async (_e, args) => {
+    const settings = setCollectionScreenshotsSettings(args)
+    const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
+    return { ...settings, ludusaviDetected }
+  })
+  addHandler('getCollectionScreenshots', (_e, args) =>
+    getCollectionScreenshots(args)
+  )
   addHandler('setCollectionBackupSettings', async (_e, args) => {
     const settings = setCollectionBackupSettings(args)
     const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)

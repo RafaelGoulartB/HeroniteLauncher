@@ -4,6 +4,7 @@ import type {
   CollectionBackupSettings,
   CollectionMetadataSettings,
   CollectionSettings,
+  CollectionScreenshotsSettings,
   CoverAspectPreset,
   LudusaviBackupFormat,
   LudusaviCompression,
@@ -19,6 +20,7 @@ type SettingsFile = {
   backup: CollectionBackupSettings
   ludusavi: LudusaviSettings
   greyUninstalledGames: boolean
+  screenshots: CollectionScreenshotsSettings
   metadata: CollectionMetadataSettings
 }
 
@@ -102,6 +104,9 @@ const settingsFile = new Store<SettingsFile>({
       compression: 'deflate'
     },
     greyUninstalledGames: true,
+    screenshots: {
+      folder: ''
+    },
     metadata: fallbackMetadata()
   }
 })
@@ -134,6 +139,10 @@ function asCompression(value?: string): LudusaviCompression {
     : 'deflate'
 }
 
+function fallbackScreenshots(): CollectionScreenshotsSettings {
+  return { folder: '' }
+}
+
 export function getCollectionSettings(): CollectionSettings {
   const backup = settingsFile.get('backup') ?? fallbackBackup()
   const ludusavi = settingsFile.get('ludusavi') ?? fallbackLudusavi()
@@ -164,6 +173,12 @@ export function getCollectionSettings(): CollectionSettings {
       lastError: ludusavi.lastError
     },
     greyUninstalledGames: settingsFile.get('greyUninstalledGames') !== false,
+    screenshots: {
+      folder:
+        (
+          settingsFile.get('screenshots') ?? fallbackScreenshots()
+        ).folder?.trim() ?? ''
+    },
     metadata: normalizeMetadata(settingsFile.get('metadata'))
   }
 }
@@ -172,6 +187,15 @@ export function setCollectionUiSettings(args: {
   greyUninstalledGames: boolean
 }): CollectionSettings {
   settingsFile.set('greyUninstalledGames', args.greyUninstalledGames)
+  return getCollectionSettings()
+}
+
+export function setCollectionScreenshotsSettings(args: {
+  folder: string
+}): CollectionSettings {
+  settingsFile.set('screenshots', {
+    folder: args.folder.trim()
+  })
   return getCollectionSettings()
 }
 
