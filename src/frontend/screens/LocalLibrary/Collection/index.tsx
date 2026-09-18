@@ -1,6 +1,7 @@
 import {
   useCallback,
   useContext,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -211,6 +212,7 @@ export default function Collection() {
     hiddenGames
   } = useContext(ContextProvider)
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [installFilter, setInstallFilter] =
     useState<InstallFilter>(readInstallFilter)
   const [facetFilters, setFacetFilters] =
@@ -390,7 +392,7 @@ export default function Collection() {
   ])
 
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase()
+    const query = deferredSearch.trim().toLowerCase()
     const next = games.filter((game) => {
       const title = collectionGameTitle(
         game,
@@ -431,7 +433,14 @@ export default function Collection() {
         )
       )
     })
-  }, [games, search, installFilter, sort, collectionMetadata, facetFilters])
+  }, [
+    games,
+    deferredSearch,
+    installFilter,
+    sort,
+    collectionMetadata,
+    facetFilters
+  ])
 
   const facetOptions = useMemo(
     () =>
@@ -544,16 +553,7 @@ export default function Collection() {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [
-    filtered,
-    groupByStatus,
-    statuses,
-    metas,
-    sort,
-    focusedKey,
-    collapsedGroups,
-    facetFilters
-  ])
+  }, [filtered, groupByStatus, statuses, collapsedGroups])
 
   useEffect(() => {
     if (!groupByStatus) {

@@ -239,7 +239,7 @@ function CollectionFocusPanel({
   meta,
   statuses,
   collectionArt,
-  metadata,
+  metadata: metadataFromList,
   cachedHeroUrl,
   facetFilters = EMPTY_FACET_FILTERS,
   onFacetFilter,
@@ -290,11 +290,31 @@ function CollectionFocusPanel({
   const [playedMinutes, setPlayedMinutes] = useState(
     () => timestampStore.get_nodefault(game.app_name)?.totalPlayed ?? 0
   )
+  const [detailMetadata, setDetailMetadata] = useState(metadataFromList)
 
   const { app_name: appName, runner } = game
+  const metadata = detailMetadata ?? metadataFromList
   const title = collectionGameTitle(gameInfo, metadata)
   const steamAppId = steamAppIdFromMeta(meta)
   const storeAppId = meta?.steamAppId
+
+  useEffect(() => {
+    setDetailMetadata(metadataFromList)
+    if (metadataFromList?.description || metadataFromList?.notes) return
+    let cancelled = false
+    const loadFull = async () => {
+      if (typeof window.api.localLibrary.getGameMetadata !== 'function') return
+      const full = await window.api.localLibrary.getGameMetadata({
+        runner,
+        appName
+      })
+      if (!cancelled && full) setDetailMetadata(full)
+    }
+    void loadFull()
+    return () => {
+      cancelled = true
+    }
+  }, [appName, runner, metadataFromList])
 
   useEffect(() => {
     setGameInfo(game)
@@ -311,6 +331,7 @@ function CollectionFocusPanel({
           ? Promise.resolve(null)
           : window.api.getExtraInfo(appName, runner)
       const steamPromise =
+        !metadataFromList &&
         storeAppId &&
         typeof window.api.localLibrary.getSteamDetails === 'function'
           ? window.api.localLibrary.getSteamDetails({
@@ -318,11 +339,12 @@ function CollectionFocusPanel({
               language
             })
           : Promise.resolve(null)
+      const wikiTitle = collectionGameTitle(game, metadataFromList)
       const [fresh, extra, wiki, nextAchievements, steam] =
         await Promise.allSettled([
           getGameInfo(appName, runner),
           extraPromise,
-          window.api.getWikiGameInfo(title, appName, runner),
+          window.api.getWikiGameInfo(wikiTitle, appName, runner),
           window.api.getAchievements(appName, runner),
           steamPromise
         ])
@@ -341,7 +363,7 @@ function CollectionFocusPanel({
     return () => {
       cancelled = true
     }
-  }, [appName, runner, title, game, storeAppId, language])
+  }, [appName, runner, game, storeAppId, language, metadataFromList])
 
   const { status, folder } = hasStatus(gameInfo)
   const [progress, previousProgress] = hasProgress(appName, runner)

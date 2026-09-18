@@ -14,7 +14,7 @@ import { sendFrontendMessage } from 'backend/ipc'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getCollectionSettings } from '../settings'
 import { getLocalGameMeta } from '../stores'
-import { getCollectionGameMetadata } from '../metadata'
+import { getGameMetadata } from '../metadata/store'
 import { pickScreenshotFolder } from './match'
 
 type ActiveGame = {
@@ -448,7 +448,10 @@ export function beginScreenshotCaptureSession(args: {
   title: string
 }) {
   const meta = getLocalGameMeta(args.appName)
-  const metadata = getCollectionGameMetadata(args.runner, args.appName)
+  const metadata = getGameMetadata(
+    args.runner === 'zoom' ? 'sideload' : args.runner,
+    args.appName
+  )
   const title = metadata?.title?.trim() || meta?.title?.trim() || args.title
   activeGames.set(gameKey(args.appName, args.runner), {
     appName: args.appName,

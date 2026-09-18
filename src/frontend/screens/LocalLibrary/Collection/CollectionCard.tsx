@@ -1,4 +1,5 @@
 import {
+  memo,
   useContext,
   useEffect,
   useMemo,
@@ -79,7 +80,7 @@ type Props = {
   onRemoved?: () => void
 }
 
-export default function CollectionCard({
+function CollectionCardActive({
   gameInfo: gameInfoFromProps,
   meta,
   collectionArt,
@@ -110,7 +111,6 @@ export default function CollectionCard({
     )
 
   const [gameInfo, setGameInfo] = useState<GameInfo>(gameInfoFromProps)
-  const [visible, setVisible] = useState(false)
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
   const [pickRomOpen, setPickRomOpen] = useState(false)
@@ -156,16 +156,6 @@ export default function CollectionCard({
     () => timestampStore.get_nodefault(appName)?.totalPlayed
   )
   const [liveExtraMinutes, setLiveExtraMinutes] = useState(0)
-
-  useEffect(() => {
-    const callback = (e: CustomEvent<{ appNames: string[] }>) => {
-      if (e.detail.appNames.includes(appName)) {
-        setVisible(true)
-      }
-    }
-    window.addEventListener('visible-cards', callback)
-    return () => window.removeEventListener('visible-cards', callback)
-  }, [appName])
 
   useEffect(() => {
     const updateInfo = async () => {
@@ -551,16 +541,6 @@ export default function CollectionCard({
     return null
   }
 
-  if (!visible && !isTrackingTime && !isFocused) {
-    return (
-      <div
-        className="collectionCard"
-        data-app-name={appName}
-        data-invisible="true"
-      />
-    )
-  }
-
   return (
     <>
       {showUninstallModal && (
@@ -746,6 +726,7 @@ export default function CollectionCard({
             'is-playing': isTrackingTime,
             'is-focused': isFocused
           })}
+          data-app-name={appName}
         >
           <div className="collectionCard__cover">
             <button
@@ -802,3 +783,34 @@ export default function CollectionCard({
     </>
   )
 }
+
+function CollectionCard(props: Props) {
+  const appName = props.gameInfo.app_name
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const callback = (event: CustomEvent<{ appNames: string[] }>) => {
+      if (event.detail.appNames.includes(appName)) setVisible(true)
+    }
+    window.addEventListener('visible-cards', callback)
+    return () => window.removeEventListener('visible-cards', callback)
+  }, [appName])
+
+  useEffect(() => {
+    if (props.isFocused) setVisible(true)
+  }, [props.isFocused])
+
+  if (!visible && !props.isFocused) {
+    return (
+      <div
+        className="collectionCard"
+        data-app-name={appName}
+        data-invisible="true"
+      />
+    )
+  }
+
+  return <CollectionCardActive {...props} />
+}
+
+export default memo(CollectionCard)

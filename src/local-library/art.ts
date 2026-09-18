@@ -129,7 +129,7 @@ function writeArt(
   art: CollectionGameArt
 ): CollectionGameArt {
   const key = collectionArtKey(runner, appName)
-  const games = { ...artFile.get('games') }
+  const games = artFile.get('games')
   const cleaned = hydrate(art)
   if (!cleaned.coverUrl && !cleaned.heroUrl) delete games[key]
   else games[key] = cleaned

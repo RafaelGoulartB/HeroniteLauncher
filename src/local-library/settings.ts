@@ -193,23 +193,16 @@ export function getCollectionSettings(): CollectionSettings {
       lastError: ludusavi.lastError
     },
     greyUninstalledGames: settingsFile.get('greyUninstalledGames') !== false,
-    screenshots: {
-      folder:
-        (
-          settingsFile.get('screenshots') ?? fallbackScreenshots()
-        ).folder?.trim() ?? '',
-      cacheLimitMb: asScreenshotCacheLimit(
-        (settingsFile.get('screenshots') ?? fallbackScreenshots()).cacheLimitMb
-      ),
-      captureEnabled: Boolean(
-        (settingsFile.get('screenshots') ?? fallbackScreenshots())
-          .captureEnabled
-      ),
-      captureAccelerator:
-        (
-          settingsFile.get('screenshots') ?? fallbackScreenshots()
-        ).captureAccelerator?.trim() || 'F10'
-    },
+    screenshots: (() => {
+      const screenshots =
+        settingsFile.get('screenshots') ?? fallbackScreenshots()
+      return {
+        folder: screenshots.folder?.trim() ?? '',
+        cacheLimitMb: asScreenshotCacheLimit(screenshots.cacheLimitMb),
+        captureEnabled: Boolean(screenshots.captureEnabled),
+        captureAccelerator: screenshots.captureAccelerator?.trim() || 'F10'
+      }
+    })(),
     metadata: normalizeMetadata(settingsFile.get('metadata'))
   }
 }
