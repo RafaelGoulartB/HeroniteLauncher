@@ -617,6 +617,13 @@ export interface CollectionScreenshotsResult {
 
 export interface CollectionScreenshotsSettings {
   folder: string
+  cacheLimitMb: number
+}
+
+export interface CollectionScreenshotCacheInfo {
+  sizeBytes: number
+  itemCount: number
+  limitBytes: number
 }
 
 export interface CollectionSettings {

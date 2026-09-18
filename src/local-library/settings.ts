@@ -16,6 +16,10 @@ import {
   METADATA_FIELDS
 } from 'common/types/local-library'
 
+export const DEFAULT_SCREENSHOT_CACHE_LIMIT_MB = 500
+const MIN_SCREENSHOT_CACHE_LIMIT_MB = 50
+const MAX_SCREENSHOT_CACHE_LIMIT_MB = 10_000
+
 type SettingsFile = {
   backup: CollectionBackupSettings
   ludusavi: LudusaviSettings
@@ -105,7 +109,8 @@ const settingsFile = new Store<SettingsFile>({
     },
     greyUninstalledGames: true,
     screenshots: {
-      folder: ''
+      folder: '',
+      cacheLimitMb: DEFAULT_SCREENSHOT_CACHE_LIMIT_MB
     },
     metadata: fallbackMetadata()
   }
@@ -140,7 +145,15 @@ function asCompression(value?: string): LudusaviCompression {
 }
 
 function fallbackScreenshots(): CollectionScreenshotsSettings {
-  return { folder: '' }
+  return { folder: '', cacheLimitMb: DEFAULT_SCREENSHOT_CACHE_LIMIT_MB }
+}
+
+function asScreenshotCacheLimit(value?: number) {
+  if (!Number.isFinite(value)) return DEFAULT_SCREENSHOT_CACHE_LIMIT_MB
+  return Math.min(
+    MAX_SCREENSHOT_CACHE_LIMIT_MB,
+    Math.max(MIN_SCREENSHOT_CACHE_LIMIT_MB, Math.round(value as number))
+  )
 }
 
 export function getCollectionSettings(): CollectionSettings {
@@ -177,7 +190,10 @@ export function getCollectionSettings(): CollectionSettings {
       folder:
         (
           settingsFile.get('screenshots') ?? fallbackScreenshots()
-        ).folder?.trim() ?? ''
+        ).folder?.trim() ?? '',
+      cacheLimitMb: asScreenshotCacheLimit(
+        (settingsFile.get('screenshots') ?? fallbackScreenshots()).cacheLimitMb
+      )
     },
     metadata: normalizeMetadata(settingsFile.get('metadata'))
   }
@@ -192,9 +208,11 @@ export function setCollectionUiSettings(args: {
 
 export function setCollectionScreenshotsSettings(args: {
   folder: string
+  cacheLimitMb: number
 }): CollectionSettings {
   settingsFile.set('screenshots', {
-    folder: args.folder.trim()
+    folder: args.folder.trim(),
+    cacheLimitMb: asScreenshotCacheLimit(args.cacheLimitMb)
   })
   return getCollectionSettings()
 }

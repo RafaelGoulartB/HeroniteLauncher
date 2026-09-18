@@ -26,6 +26,8 @@ export const localLibrary = {
   getSettings: makeHandlerInvoker('getCollectionSettings'),
   setUiSettings: makeHandlerInvoker('setCollectionUiSettings'),
   setScreenshotsSettings: makeHandlerInvoker('setCollectionScreenshotsSettings'),
+  getScreenshotCacheInfo: makeHandlerInvoker('getCollectionScreenshotCacheInfo'),
+  clearScreenshotCache: makeHandlerInvoker('clearCollectionScreenshotCache'),
   getScreenshots: makeHandlerInvoker('getCollectionScreenshots'),
   setBackupSettings: makeHandlerInvoker('setCollectionBackupSettings'),
   runBackup: makeHandlerInvoker('runCollectionBackup'),

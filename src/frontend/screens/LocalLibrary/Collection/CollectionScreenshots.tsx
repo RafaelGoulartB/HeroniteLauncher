@@ -10,7 +10,6 @@ import {
   FullscreenExit
 } from '@mui/icons-material'
 import type { CollectionScreenshot } from 'common/types/local-library'
-import { CachedImage } from 'frontend/components/UI'
 import './CollectionScreenshots.css'
 
 type Props = {
@@ -21,12 +20,57 @@ type Props = {
 }
 
 const PREVIEW_SLOTS = 4
+const GALLERY_PAGE_SIZE = 50
 const MIN_ZOOM = 1
 const MAX_ZOOM = 5
 const ZOOM_STEP = 1.12
 
 function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value))
+}
+
+function screenshotPreviewUrl(item: CollectionScreenshot) {
+  const version = Math.trunc(item.takenAt ?? 0)
+  return `${item.url}?preview=1&v=${version}`
+}
+
+function ScreenshotPreview({ item }: { item: CollectionScreenshot }) {
+  const [visible, setVisible] = useState(false)
+  const containerRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) return
+    if (!('IntersectionObserver' in window)) {
+      setVisible(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        setVisible(true)
+        observer.disconnect()
+      },
+      { rootMargin: '120px' }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <span ref={containerRef} className="collectionScreenshots__preview">
+      {visible && (
+        <img
+          src={screenshotPreviewUrl(item)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+        />
+      )}
+    </span>
+  )
 }
 
 export default function CollectionScreenshots({
@@ -38,6 +82,8 @@ export default function CollectionScreenshots({
   const { t } = useTranslation()
   const [items, setItems] = useState<CollectionScreenshot[]>([])
   const [galleryOpen, setGalleryOpen] = useState(false)
+  const [galleryVisibleCount, setGalleryVisibleCount] =
+    useState(GALLERY_PAGE_SIZE)
   const [viewIndex, setViewIndex] = useState<number | null>(null)
   const [zoom, setZoom] = useState(MIN_ZOOM)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -62,6 +108,7 @@ export default function CollectionScreenshots({
     let cancelled = false
     setItems([])
     setGalleryOpen(false)
+    setGalleryVisibleCount(GALLERY_PAGE_SIZE)
     setViewIndex(null)
     setZoom(MIN_ZOOM)
     setPan({ x: 0, y: 0 })
@@ -85,6 +132,7 @@ export default function CollectionScreenshots({
   const hasMore = items.length > PREVIEW_SLOTS
   const visible = hasMore ? items.slice(0, PREVIEW_SLOTS - 1) : items
   const remaining = items.length - visible.length
+  const galleryItems = items.slice(0, galleryVisibleCount)
 
   function resetViewTransform() {
     zoomRef.current = MIN_ZOOM
@@ -146,6 +194,11 @@ export default function CollectionScreenshots({
         resetViewTransform()
         setFitScreen((current) => !current)
       }
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        setFitScreen(false)
+        setViewIndex(null)
+      }
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
@@ -185,6 +238,7 @@ export default function CollectionScreenshots({
 
   function closeGallery() {
     setGalleryOpen(false)
+    setGalleryVisibleCount(GALLERY_PAGE_SIZE)
     setViewIndex(null)
   }
 
@@ -250,7 +304,7 @@ export default function CollectionScreenshots({
               onClick={() => setViewIndex(index)}
               title={item.name}
             >
-              <CachedImage src={item.url} alt="" />
+              <ScreenshotPreview item={item} />
             </button>
           ))}
           {remaining > 0 && (
@@ -259,6 +313,7 @@ export default function CollectionScreenshots({
               className="collectionScreenshots__thumb collectionScreenshots__more"
               onClick={() => {
                 setGalleryOpen(true)
+                setGalleryVisibleCount(GALLERY_PAGE_SIZE)
                 setViewIndex(null)
               }}
               title={t(
@@ -267,7 +322,7 @@ export default function CollectionScreenshots({
               )}
             >
               {items[visible.length] && (
-                <CachedImage src={items[visible.length].url} alt="" />
+                <ScreenshotPreview item={items[visible.length]} />
               )}
               <span>
                 {t('collection.focus.screenshotsMoreCount', '+{{count}}', {
@@ -309,7 +364,7 @@ export default function CollectionScreenshots({
                   </button>
                 </header>
                 <div className="collectionScreenshots__grid">
-                  {items.map((item, index) => (
+                  {galleryItems.map((item, index) => (
                     <button
                       key={item.id}
                       type="button"
@@ -317,9 +372,28 @@ export default function CollectionScreenshots({
                       onClick={() => setViewIndex(index)}
                       title={item.name}
                     >
-                      <CachedImage src={item.url} alt="" />
+                      <ScreenshotPreview item={item} />
                     </button>
                   ))}
+                  {galleryVisibleCount < items.length && (
+                    <button
+                      type="button"
+                      className="button outline collectionScreenshots__loadMore"
+                      onClick={() =>
+                        setGalleryVisibleCount((current) =>
+                          Math.min(current + GALLERY_PAGE_SIZE, items.length)
+                        )
+                      }
+                    >
+                      {t(
+                        'collection.focus.screenshotsLoadMore',
+                        'Load more ({{count}} remaining)',
+                        {
+                          count: items.length - galleryVisibleCount
+                        }
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

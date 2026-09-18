@@ -19,6 +19,13 @@ Collection screenshots live in overlay code (`src/local-library/screenshots/**`,
 are matched by normalized title: punctuation (`:` vs `-`), editions
 (Director's Cut, GOTY), leading articles, compact names, token overlap, and
 Steam app IDs. Sequels with different numbers are kept apart.
+Grid previews are generated as quality-60 JPEGs at 320×180, cached under
+`local_library/screenshot-thumbnails`, limited to two concurrent jobs, and
+requested only when they approach the visible area. The full-resolution file
+is loaded only after opening a screenshot. The cache defaults to 500 MB,
+evicts least-recently-used previews, removes entries whose originals no longer
+exist, and can be resized or cleared from Collection settings. The gallery
+renders 50 screenshots initially and adds subsequent batches on request.
 
 ## Upstream hooks (keep these diffs small when merging)
 
@@ -39,6 +46,7 @@ Steam app IDs. Sequels with different numbers are kept apart.
 | `src/frontend/components/UI/Sidebar/components/SidebarItem/`      | `end` so `/` does not stay active everywhere                                                                                                                                                                                                                                |
 | `public/locales/en/gamepage.json`                                 | Collection, session, Steam, and Ludusavi translations                                                                                                                                                                                                                       |
 | `public/locales/en/translation.json`                              | Collection, Playnite, Local import, backup, art, status, and screenshot translations                                                                                                                                                                                        |
+| `package.json` / `pnpm-lock.yaml`                                 | `sharp` for cached, low-resolution Collection screenshot previews                                                                                                                                                                                                           |
 
 Sidecar data lives in Electron stores `local_library/library` and
 `local_library/sessions`, not in `GameInfo`. Steam Collection heroes are

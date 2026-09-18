@@ -3,6 +3,7 @@ import { join, resolve, sep } from 'path'
 import { pathToFileURL } from 'url'
 import { app, net, protocol } from 'electron'
 import { getCollectionSettings } from './settings'
+import { getScreenshotThumbnail } from './screenshots/thumbnails'
 
 const SCHEME = 'localart'
 const IMAGE_EXT = new Set([
@@ -123,6 +124,24 @@ export function initLocalArtProtocol() {
     if (!filePath) {
       return new Response('Not found', { status: 404 })
     }
+
+    const parsed = new URL(request.url)
+    if (
+      parsed.hostname === 'screenshots' &&
+      parsed.searchParams.get('preview') === '1'
+    ) {
+      const thumbnail = await getScreenshotThumbnail(filePath)
+      if (!thumbnail) {
+        return new Response('Preview unavailable', { status: 415 })
+      }
+      return new Response(new Uint8Array(thumbnail), {
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'Cache-Control': 'no-store'
+        }
+      })
+    }
+
     return net.fetch(pathToFileURL(filePath).href)
   })
 }

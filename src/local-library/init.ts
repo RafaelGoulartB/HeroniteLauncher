@@ -73,6 +73,10 @@ import {
   setEmulatorLaunchRom
 } from './emulation'
 import { getCollectionScreenshots } from './screenshots'
+import {
+  clearScreenshotThumbnailCache,
+  maintainScreenshotThumbnailCache
+} from './screenshots/thumbnails'
 
 let registered = false
 
@@ -135,9 +139,16 @@ export function registerLocalLibraryIpc() {
   })
   addHandler('setCollectionScreenshotsSettings', async (_e, args) => {
     const settings = setCollectionScreenshotsSettings(args)
+    await maintainScreenshotThumbnailCache()
     const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
     return { ...settings, ludusaviDetected }
   })
+  addHandler('getCollectionScreenshotCacheInfo', () =>
+    maintainScreenshotThumbnailCache()
+  )
+  addHandler('clearCollectionScreenshotCache', () =>
+    clearScreenshotThumbnailCache()
+  )
   addHandler('getCollectionScreenshots', (_e, args) =>
     getCollectionScreenshots(args)
   )
@@ -217,5 +228,6 @@ export async function initLocalLibrary() {
       .filter((id): id is string => Boolean(id))
   )
   void refreshMissingCollectionMetadata()
+  void maintainScreenshotThumbnailCache()
   void maybeRunScheduledBackup()
 }

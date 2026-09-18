@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type {
   CollectionBackupInterval,
   CollectionMetadataSettings,
+  CollectionScreenshotCacheInfo,
   CollectionSettings,
   CoverAspectPreset,
   LudusaviBackupFormat,
@@ -58,6 +59,11 @@ function formatBackupTime(value?: string) {
   }).format(date)
 }
 
+function formatCacheSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 const FIELD_LABELS: Record<MetadataField, string> = {
   description: 'Description',
   releaseDate: 'Release date',
@@ -87,6 +93,11 @@ export default function CollectionSettingsDialog({
   const [interval, setInterval] = useState<CollectionBackupInterval>('weekly')
   const [greyUninstalledGames, setGreyUninstalledGames] = useState(true)
   const [screenshotsFolder, setScreenshotsFolder] = useState('')
+  const [screenshotCacheLimit, setScreenshotCacheLimit] = useState('500')
+  const [screenshotCacheInfo, setScreenshotCacheInfo] =
+    useState<CollectionScreenshotCacheInfo | null>(null)
+  const [screenshotCacheBusy, setScreenshotCacheBusy] = useState(false)
+  const [screenshotCacheMessage, setScreenshotCacheMessage] = useState('')
   const [ludusaviEnabled, setLudusaviEnabled] = useState(false)
   const [useInstalledConfig, setUseInstalledConfig] = useState(true)
   const [ludusaviBinary, setLudusaviBinary] = useState('')
@@ -108,8 +119,12 @@ export default function CollectionSettingsDialog({
   const [igdbTest, setIgdbTest] = useState('')
 
   async function reload() {
-    const next = await window.api.localLibrary.getSettings()
+    const [next, cacheInfo] = await Promise.all([
+      window.api.localLibrary.getSettings(),
+      window.api.localLibrary.getScreenshotCacheInfo()
+    ])
     setSettings(next)
+    setScreenshotCacheInfo(cacheInfo)
     setFolder(next.backup.folder)
     setInterval(next.backup.interval)
     setLudusaviEnabled(next.ludusavi.enabled)
@@ -120,6 +135,7 @@ export default function CollectionSettingsDialog({
     setLudusaviCompression(next.ludusavi.compression)
     setGreyUninstalledGames(next.greyUninstalledGames !== false)
     setScreenshotsFolder(next.screenshots?.folder ?? '')
+    setScreenshotCacheLimit(String(next.screenshots.cacheLimitMb))
     setIgdbClientId(next.metadata.igdbClientId)
     setIgdbClientSecret(next.metadata.igdbClientSecret)
     setCoverAspect(next.metadata.coverAspect)
@@ -149,20 +165,49 @@ export default function CollectionSettingsDialog({
     }
   }
 
-  async function persistScreenshots(nextFolder = screenshotsFolder) {
+  async function persistScreenshots(
+    nextFolder = screenshotsFolder,
+    nextCacheLimit = Number(screenshotCacheLimit)
+  ) {
     setSaving(true)
     setError('')
+    setScreenshotCacheMessage('')
     try {
       const next = await window.api.localLibrary.setScreenshotsSettings({
-        folder: nextFolder
+        folder: nextFolder,
+        cacheLimitMb: nextCacheLimit
       })
       setSettings(next)
       setScreenshotsFolder(next.screenshots.folder)
+      setScreenshotCacheLimit(String(next.screenshots.cacheLimitMb))
+      setScreenshotCacheInfo(
+        await window.api.localLibrary.getScreenshotCacheInfo()
+      )
       onSettingsChange?.(next)
     } catch (err) {
       setError(String(err))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function clearScreenshotCache() {
+    setScreenshotCacheBusy(true)
+    setError('')
+    setScreenshotCacheMessage('')
+    try {
+      const info = await window.api.localLibrary.clearScreenshotCache()
+      setScreenshotCacheInfo(info)
+      setScreenshotCacheMessage(
+        t(
+          'collection.settings.screenshotCacheCleared',
+          'Screenshot preview cache cleared.'
+        )
+      )
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setScreenshotCacheBusy(false)
     }
   }
 
@@ -416,6 +461,66 @@ export default function CollectionSettingsDialog({
                 'Screenshots folder'
               )}
             />
+            <TextInputField
+              htmlId="collection-screenshot-cache-limit"
+              type="number"
+              min={50}
+              max={10000}
+              step={50}
+              value={screenshotCacheLimit}
+              disabled={saving || screenshotCacheBusy}
+              onChange={setScreenshotCacheLimit}
+              onBlur={() =>
+                void persistScreenshots(
+                  screenshotsFolder,
+                  Number(screenshotCacheLimit)
+                )
+              }
+              label={t(
+                'collection.settings.screenshotCacheLimit',
+                'Preview cache limit (MB)'
+              )}
+            />
+            <div className="CollectionSettingsDialog__actions">
+              <button
+                type="button"
+                className="button outline"
+                disabled={
+                  saving ||
+                  screenshotCacheBusy ||
+                  !screenshotCacheInfo?.itemCount
+                }
+                onClick={() => void clearScreenshotCache()}
+              >
+                {screenshotCacheBusy
+                  ? t(
+                      'collection.settings.screenshotCacheClearing',
+                      'Clearing…'
+                    )
+                  : t(
+                      'collection.settings.screenshotCacheClear',
+                      'Clear preview cache'
+                    )}
+              </button>
+            </div>
+            {screenshotCacheInfo && (
+              <p className="CollectionSettingsDialog__meta">
+                {t(
+                  'collection.settings.screenshotCacheUsage',
+                  '{{size}} used by {{count}} previews · {{limit}} limit',
+                  {
+                    size: formatCacheSize(screenshotCacheInfo.sizeBytes),
+                    count: screenshotCacheInfo.itemCount,
+                    limit: formatCacheSize(screenshotCacheInfo.limitBytes)
+                  }
+                )}
+              </p>
+            )}
+            {screenshotCacheMessage && (
+              <p className="CollectionSettingsDialog__ok">
+                {screenshotCacheMessage}
+              </p>
+            )}
           </section>
         </TabPanel>
 

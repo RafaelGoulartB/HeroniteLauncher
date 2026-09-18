@@ -75,6 +75,7 @@ import type {
   CollectionBackupInterval,
   CollectionBackupResult,
   CollectionSettings,
+  CollectionScreenshotCacheInfo,
   CollectionScreenshotsResult,
   LudusaviBackupResult,
   LudusaviSettings,
@@ -327,7 +328,10 @@ interface AsyncIPCFunctions {
   }) => Promise<CollectionSettings>
   setCollectionScreenshotsSettings: (args: {
     folder: string
+    cacheLimitMb: number
   }) => Promise<CollectionSettings>
+  getCollectionScreenshotCacheInfo: () => Promise<CollectionScreenshotCacheInfo>
+  clearCollectionScreenshotCache: () => Promise<CollectionScreenshotCacheInfo>
   getCollectionScreenshots: (args: {
     title: string
     steamAppId?: string
