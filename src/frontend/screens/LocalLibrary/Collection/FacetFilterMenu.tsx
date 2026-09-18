@@ -142,7 +142,8 @@ export default function FacetFilterMenu({
     series: t('collection.filter.facets.series', 'Series'),
     developer: t('collection.filter.facets.developer', 'Developer'),
     publisher: t('collection.filter.facets.publisher', 'Publisher'),
-    genre: t('collection.filter.facets.genre', 'Genre')
+    genre: t('collection.filter.facets.genre', 'Genre'),
+    platform: t('collection.filter.facets.platform', 'Platform')
   }
 
   const summary = FACET_KINDS.map((kind) => filters[kind])
@@ -159,7 +160,7 @@ export default function FacetFilterMenu({
               ? `${t('collection.filter.facets.menu', 'Filter')}: ${summary}`
               : t(
                   'collection.filter.facets.menu',
-                  'Filter by series, developer, publisher'
+                  'Filter by series, developer, publisher, platform'
                 )
           }
         >

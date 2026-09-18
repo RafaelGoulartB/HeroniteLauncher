@@ -18,6 +18,10 @@ import {
   getLocalGameMeta,
   upsertLocalGameMeta
 } from './stores'
+import {
+  emulatorExecutablePath,
+  emulatorRomInstalled
+} from './emulation/launch'
 
 function firstExistingPath(...paths: Array<string | undefined>): string {
   for (const path of paths) {
@@ -74,6 +78,10 @@ export function applySideloadAppToLocalMeta(game: GameInfo): void {
     launcherArgs: existing?.launcherArgs,
     roms: existing?.roms,
     emulatorName: existing?.emulatorName,
+    emulatorId: existing?.emulatorId,
+    emulatorProfileId: existing?.emulatorProfileId,
+    platformId: existing?.platformId,
+    selectedRomPath: existing?.selectedRomPath,
     notes: existing?.notes,
     completionStatusId: existing?.completionStatusId,
     playniteCompletionStatusId: existing?.playniteCompletionStatusId
@@ -107,12 +115,22 @@ function nextInstallState(
     }
   }
 
+  if (meta.launchKind === 'emulator') {
+    const executable =
+      emulatorExecutablePath(meta) || localExecutablePath(game, meta)
+    const romsOk = emulatorRomInstalled(meta)
+    const exeOk =
+      meta.emulatorId && executable === 'flatpak'
+        ? true
+        : Boolean(executable && pathExists(executable))
+    return {
+      is_installed: exeOk && romsOk,
+      executable: exeOk ? executable : ''
+    }
+  }
+
   const executable = localExecutablePath(game, meta)
-  if (
-    meta.launchKind === 'executable' ||
-    meta.launchKind === 'emulator' ||
-    executable
-  ) {
+  if (meta.launchKind === 'executable' || executable) {
     return {
       is_installed: Boolean(executable),
       executable

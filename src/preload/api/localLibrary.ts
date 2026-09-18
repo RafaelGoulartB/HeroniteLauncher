@@ -42,5 +42,16 @@ export const localLibrary = {
   cancelMetadataBulk: makeHandlerInvoker('cancelCollectionMetadataBulk'),
   onMetadataBulkProgress: frontendListenerSlot('collectionMetadataBulkProgress'),
   forceClearPlaying: makeHandlerInvoker('forceClearLocalPlaying'),
-  removeGame: makeHandlerInvoker('removeCollectionGame')
+  removeGame: makeHandlerInvoker('removeCollectionGame'),
+  getEmulationState: makeHandlerInvoker('getEmulationState'),
+  detectEmulators: makeHandlerInvoker('detectCollectionEmulators'),
+  addDetectedEmulators: makeHandlerInvoker('addDetectedEmulators'),
+  upsertEmulator: makeHandlerInvoker('upsertUserEmulator'),
+  removeEmulator: makeHandlerInvoker('removeUserEmulator'),
+  upsertRomScanner: makeHandlerInvoker('upsertRomScanner'),
+  removeRomScanner: makeHandlerInvoker('removeRomScanner'),
+  previewRomScan: makeHandlerInvoker('previewRomScan'),
+  importRomScan: makeHandlerInvoker('importRomScan'),
+  runRomScanners: makeHandlerInvoker('runRomScanners'),
+  setEmulatorLaunchRom: makeHandlerInvoker('setEmulatorLaunchRom')
 }

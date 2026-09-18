@@ -264,6 +264,10 @@ export async function tryLaunchLocalGame(
   logWriter: LogWriter,
   extraArgs: string[] = []
 ): Promise<boolean | null> {
+  const { tryLaunchEmulatedGame } = await import('./emulation/launch')
+  const emulated = await tryLaunchEmulatedGame(gameInfo, logWriter, extraArgs)
+  if (emulated !== null) return emulated
+
   const meta = getLocalGameMeta(gameInfo.app_name)
   if (!meta || meta.launchKind !== 'steam-uri' || !meta.steamAppId) {
     return null
@@ -327,6 +331,8 @@ export async function tryLaunchLocalGame(
 }
 
 export async function tryStopLocalGame(appName: string): Promise<boolean> {
+  const { tryStopEmulatedGame } = await import('./emulation/launch')
+  if (await tryStopEmulatedGame(appName)) return true
   if (!isSteamUriGame(appName)) return false
   const { stopLocalPlaytimeWatch } = await import('./playtime-watch')
   stopLocalPlaytimeWatch(appName)

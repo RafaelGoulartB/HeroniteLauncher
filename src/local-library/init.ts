@@ -59,6 +59,18 @@ import {
   testIgdbCredentials,
   updateCollectionGameDetails
 } from './metadata'
+import {
+  addDetectedEmulators,
+  autoScanRomFolders,
+  deleteRomScanner,
+  deleteUserEmulator,
+  getEmulationState,
+  importRoms,
+  saveRomScanner,
+  saveUserEmulator,
+  scanRomsPreview,
+  setEmulatorLaunchRom
+} from './emulation'
 
 let registered = false
 
@@ -162,6 +174,19 @@ export function registerLocalLibraryIpc() {
     forceClearLocalPlaying(args.appName, args.runner)
   )
   addHandler('removeCollectionGame', (_e, args) => removeCollectionGame(args))
+  addHandler('getEmulationState', (_e, refreshDetect) =>
+    getEmulationState(refreshDetect !== false)
+  )
+  addHandler('detectCollectionEmulators', () => getEmulationState(true))
+  addHandler('addDetectedEmulators', () => addDetectedEmulators())
+  addHandler('upsertUserEmulator', (_e, args) => saveUserEmulator(args))
+  addHandler('removeUserEmulator', (_e, id) => deleteUserEmulator(id))
+  addHandler('upsertRomScanner', (_e, args) => saveRomScanner(args))
+  addHandler('removeRomScanner', (_e, id) => deleteRomScanner(id))
+  addHandler('previewRomScan', (_e, args) => scanRomsPreview(args))
+  addHandler('importRomScan', (_e, args) => importRoms(args))
+  addHandler('runRomScanners', () => autoScanRomFolders())
+  addHandler('setEmulatorLaunchRom', (_e, args) => setEmulatorLaunchRom(args))
 }
 
 export async function initLocalLibrary() {
@@ -174,6 +199,7 @@ export async function initLocalLibrary() {
   ensureDefaultStatuses()
   backfillMissingGameStatuses()
   await refreshLocalInstallStates()
+  void autoScanRomFolders()
   void refreshMissingLocalCovers()
   void warmSteamHeroes(
     Object.values(getAllLocalGameMeta())

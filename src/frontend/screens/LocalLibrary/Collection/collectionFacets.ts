@@ -1,7 +1,12 @@
 import type { GameInfo } from 'common/types'
 import type { CollectionGameMetadata } from 'common/types/local-library'
 
-export type CollectionFacetKind = 'series' | 'developer' | 'publisher' | 'genre'
+export type CollectionFacetKind =
+  | 'series'
+  | 'developer'
+  | 'publisher'
+  | 'genre'
+  | 'platform'
 
 export type CollectionFacetFilters = Record<CollectionFacetKind, string | null>
 
@@ -14,14 +19,16 @@ export const EMPTY_FACET_FILTERS: CollectionFacetFilters = {
   series: null,
   developer: null,
   publisher: null,
-  genre: null
+  genre: null,
+  platform: null
 }
 
 export const FACET_KINDS: CollectionFacetKind[] = [
   'series',
   'developer',
   'publisher',
-  'genre'
+  'genre',
+  'platform'
 ]
 
 export function facetKey(value: string): string {
@@ -73,7 +80,14 @@ export function gameFacets(
   const genres = uniqueNames(
     metadata?.genres?.length ? metadata.genres : (game.extra?.genres ?? [])
   )
-  return { series, developer: developers, publisher: publishers, genre: genres }
+  const platforms = uniqueNames(metadata?.platforms ?? [])
+  return {
+    series,
+    developer: developers,
+    publisher: publishers,
+    genre: genres,
+    platform: platforms
+  }
 }
 
 export function matchesFacets(
@@ -103,7 +117,8 @@ export function collectFacetOptions(
     series: new Map(),
     developer: new Map(),
     publisher: new Map(),
-    genre: new Map()
+    genre: new Map(),
+    platform: new Map()
   }
 
   for (const game of games) {
@@ -128,7 +143,8 @@ export function collectFacetOptions(
     series: sortOptions([...buckets.series.values()]),
     developer: sortOptions([...buckets.developer.values()]),
     publisher: sortOptions([...buckets.publisher.values()]),
-    genre: sortOptions([...buckets.genre.values()])
+    genre: sortOptions([...buckets.genre.values()]),
+    platform: sortOptions([...buckets.platform.values()])
   }
 }
 

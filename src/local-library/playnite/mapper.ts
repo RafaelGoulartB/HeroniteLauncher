@@ -99,7 +99,13 @@ function resolveEmulatorLaunch(
   game: PlayniteGame,
   emulators: PlayniteEmulator[],
   driveMap: DriveRemap[]
-): { executable?: string; args?: string; emulatorName?: string } {
+): {
+  executable?: string
+  args?: string
+  emulatorName?: string
+  emulatorId?: string
+  emulatorProfileId?: string
+} {
   const action = playAction(game)
   const emulator = emulators.find((item) => item.id === action?.emulatorId)
   const profile =
@@ -107,20 +113,18 @@ function resolveEmulatorLaunch(
     emulator?.profiles[0]
 
   const installDir = remapWindowsPath(emulator?.installDir, driveMap)
-  const romPath = remapWindowsPath(game.roms[0]?.path, driveMap)
   const rawExe =
     profile?.executable ?? profile?.startupExecutable ?? emulator?.installDir
   const expandedExe = expandPlayniteVariables(rawExe, {
     InstallDir: installDir,
-    EmulatorDir: installDir,
-    ImagePath: romPath
+    EmulatorDir: installDir
   })
   const executable = remapWindowsPath(expandedExe, driveMap) ?? expandedExe
 
   const rawArgs = action?.overrideDefaultArgs
     ? action.arguments
     : [
-        profile?.arguments ?? profile?.customArguments,
+        profile?.arguments ?? profile?.customArguments ?? '{ImagePath}',
         action?.additionalArguments
       ]
         .filter(Boolean)
@@ -129,11 +133,16 @@ function resolveEmulatorLaunch(
   const args = expandPlayniteVariables(rawArgs, {
     InstallDir: remapWindowsPath(game.installDirectory, driveMap),
     EmulatorDir: installDir,
-    ImagePath: romPath,
     Name: game.name
   })
 
-  return { executable, args, emulatorName: emulator?.name }
+  return {
+    executable,
+    args,
+    emulatorName: emulator?.name,
+    emulatorId: emulator?.id,
+    emulatorProfileId: profile?.id
+  }
 }
 
 function resolveExecutableLaunch(
@@ -176,6 +185,8 @@ export function mapPlayniteGame(
   let executable: string | undefined
   let launcherArgs: string | undefined
   let emulatorName: string | undefined
+  let emulatorId: string | undefined
+  let emulatorProfileId: string | undefined
 
   if (source === 'epic') {
     destination = 'legendary'
@@ -194,6 +205,8 @@ export function mapPlayniteGame(
     executable = resolved.executable
     launcherArgs = resolved.args
     emulatorName = resolved.emulatorName
+    emulatorId = resolved.emulatorId
+    emulatorProfileId = resolved.emulatorProfileId
   } else {
     const resolved = resolveExecutableLaunch(game, driveMap)
     executable = resolved.executable
@@ -233,8 +246,15 @@ export function mapPlayniteGame(
     windowsExecutable: playAction(game)?.path,
     remappedExecutable: executable,
     launcherArgs,
-    roms: game.roms,
+    roms: game.roms
+      .map((rom) => ({
+        name: rom.name,
+        path: remapWindowsPath(rom.path, driveMap) ?? rom.path
+      }))
+      .filter((rom) => rom.path),
     emulatorName,
+    emulatorId,
+    emulatorProfileId,
     notes: game.notes,
     playniteCompletionStatusId: game.completionStatusId
   }

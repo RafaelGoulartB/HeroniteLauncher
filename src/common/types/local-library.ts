@@ -42,6 +42,156 @@ export interface LocalGameRom {
   path: string
 }
 
+export type EmulatorLaunchKind = 'native' | 'flatpak' | 'wine'
+
+export type EmulatorWorkingDir = 'emulator' | 'rom'
+
+export interface EmulatorDefinitionProfile {
+  id: string
+  name: string
+  platformId: string
+  platformName: string
+  extensions: string[]
+  arguments: string
+  core?: string
+  folderIndicator?: string
+  playlistExtensions?: string[]
+  workingDir?: EmulatorWorkingDir
+}
+
+export interface EmulatorDefinition {
+  id: string
+  name: string
+  website?: string
+  binaries: string[]
+  flatpakId?: string
+  stopPattern?: string
+  coreDirHints?: string[]
+  profiles: EmulatorDefinitionProfile[]
+}
+
+export interface UserEmulatorProfile {
+  id: string
+  definitionProfileId?: string
+  name: string
+  platformId?: string
+  platformName?: string
+  arguments: string
+  extensions: string[]
+  corePath?: string
+  folderIndicator?: string
+  playlistExtensions?: string[]
+  workingDir?: EmulatorWorkingDir
+}
+
+export interface UserEmulator {
+  id: string
+  definitionId: string
+  name: string
+  executable: string
+  installDir?: string
+  launchKind: EmulatorLaunchKind
+  flatpakId?: string
+  playniteId?: string
+  profiles: UserEmulatorProfile[]
+}
+
+export interface DetectedEmulatorProfile {
+  id: string
+  name: string
+  platformName: string
+  corePath?: string
+}
+
+export interface DetectedEmulator {
+  definitionId: string
+  name: string
+  executable: string
+  launchKind: EmulatorLaunchKind
+  flatpakId?: string
+  profiles: DetectedEmulatorProfile[]
+  alreadyAdded: boolean
+}
+
+export interface RomScanner {
+  id: string
+  name: string
+  emulatorId: string
+  profileId: string
+  directory: string
+  scanSubfolders: boolean
+  mergeRelatedFiles: boolean
+  autoScanOnRefresh: boolean
+}
+
+export interface RomScanItem {
+  title: string
+  roms: LocalGameRom[]
+  alreadyImported: boolean
+  import: boolean
+}
+
+export interface RomScanPreview {
+  scannerId?: string
+  emulatorId: string
+  emulatorName: string
+  profileId: string
+  profileName: string
+  platformName?: string
+  directory: string
+  games: RomScanItem[]
+  errors: string[]
+}
+
+export interface RomScanImportArgs {
+  emulatorId: string
+  profileId: string
+  directory: string
+  scannerId?: string
+  scanSubfolders?: boolean
+  mergeRelatedFiles?: boolean
+  autoScanOnRefresh?: boolean
+  games: RomScanItem[]
+}
+
+export interface RomScanImportResult {
+  imported: number
+  updated: number
+  skipped: number
+  scannerId: string
+  errors: string[]
+}
+
+export interface EmulationState {
+  catalog: EmulatorDefinition[]
+  emulators: UserEmulator[]
+  scanners: RomScanner[]
+  detected: DetectedEmulator[]
+}
+
+export interface UpsertUserEmulatorArgs {
+  id?: string
+  definitionId: string
+  name: string
+  executable: string
+  installDir?: string
+  launchKind: EmulatorLaunchKind
+  flatpakId?: string
+  playniteId?: string
+  profiles?: UserEmulatorProfile[]
+}
+
+export interface UpsertRomScannerArgs {
+  id?: string
+  name?: string
+  emulatorId: string
+  profileId: string
+  directory: string
+  scanSubfolders?: boolean
+  mergeRelatedFiles?: boolean
+  autoScanOnRefresh?: boolean
+}
+
 export interface LocalGameMeta {
   appName: string
   runner: 'sideload' | 'legendary' | 'gog' | 'nile'
@@ -58,6 +208,10 @@ export interface LocalGameMeta {
   launcherArgs?: string
   roms?: LocalGameRom[]
   emulatorName?: string
+  emulatorId?: string
+  emulatorProfileId?: string
+  platformId?: string
+  selectedRomPath?: string
   notes?: string
   completionStatusId?: string
   playniteCompletionStatusId?: string

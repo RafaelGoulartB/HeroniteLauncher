@@ -10,7 +10,13 @@ import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 import { faSearch } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Menu, MenuOpen, Settings, CloudDownload } from '@mui/icons-material'
+import {
+  Menu,
+  MenuOpen,
+  Settings,
+  CloudDownload,
+  SportsEsports
+} from '@mui/icons-material'
 import type { GameInfo } from 'common/types'
 import type {
   CollectionGameArt,
@@ -27,6 +33,7 @@ import CollectionCard from './CollectionCard'
 import CollectionFocus from './CollectionFocus'
 import CollectionSettingsDialog from './CollectionSettingsDialog'
 import CollectionMetadataWizard from './CollectionMetadataWizard'
+import ScanRomsDialog from './ScanRomsDialog'
 import InstallFilterMenu, { type InstallFilter } from './InstallFilterMenu'
 import FacetFilterMenu from './FacetFilterMenu'
 import PlayniteMenu from './PlayniteMenu'
@@ -104,7 +111,8 @@ function readFacetFilters(): CollectionFacetFilters {
       series: text('series'),
       developer: text('developer'),
       publisher: text('publisher'),
-      genre: text('genre')
+      genre: text('genre'),
+      platform: text('platform')
     }
   } catch {
     return { ...EMPTY_FACET_FILTERS }
@@ -227,6 +235,12 @@ export default function Collection() {
   >({})
   const [coverAspect, setCoverAspect] = useState<CoverAspectPreset>('steam')
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [scanOpen, setScanOpen] = useState(false)
+  const [scanSeed, setScanSeed] = useState<{
+    emulatorId?: string
+    profileId?: string
+    directory?: string
+  }>({})
   const [bulkProgress, setBulkProgress] =
     useState<CollectionMetadataBulkProgress>(EMPTY_BULK)
   const [bulkDismissed, setBulkDismissed] = useState(true)
@@ -336,13 +350,13 @@ export default function Collection() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (settingsOpen || wizardOpen) return
+        if (settingsOpen || wizardOpen || scanOpen) return
         setFocusedKey(null)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [settingsOpen, wizardOpen])
+  }, [settingsOpen, wizardOpen, scanOpen])
 
   const games = useMemo(() => {
     const all: GameInfo[] = [
@@ -737,6 +751,21 @@ export default function Collection() {
           <button
             type="button"
             className="collection__toolBtn"
+            title={t('collection.emulation.scanTitle', 'Add emulated games')}
+            aria-label={t(
+              'collection.emulation.scanTitle',
+              'Add emulated games'
+            )}
+            onClick={() => {
+              setScanSeed({})
+              setScanOpen(true)
+            }}
+          >
+            <SportsEsports />
+          </button>
+          <button
+            type="button"
+            className="collection__toolBtn"
             title={t('collection.settings.title', 'Collection settings')}
             aria-label={t('collection.settings.title', 'Collection settings')}
             onClick={() => setSettingsOpen(true)}
@@ -880,6 +909,19 @@ export default function Collection() {
             setBulkDismissed(false)
             setWizardOpen(true)
           }}
+          onOpenScan={(seed) => {
+            setScanSeed(seed ?? {})
+            setScanOpen(true)
+          }}
+        />
+      )}
+      {scanOpen && (
+        <ScanRomsDialog
+          initialEmulatorId={scanSeed.emulatorId}
+          initialProfileId={scanSeed.profileId}
+          initialDirectory={scanSeed.directory}
+          onClose={() => setScanOpen(false)}
+          onImported={() => void reload()}
         />
       )}
       {wizardOpen && (

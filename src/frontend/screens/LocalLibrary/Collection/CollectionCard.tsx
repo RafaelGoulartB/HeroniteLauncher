@@ -65,6 +65,8 @@ import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
 import { collectionCoverSrc } from './steamArt'
 import { collectionGameTitle } from './collectionTitle'
+import PickRomDialog from './PickRomDialog'
+import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
 import './CollectionCard.css'
 
 const storage: Storage = window.localStorage
@@ -117,6 +119,7 @@ export default function CollectionCard({
   const [visible, setVisible] = useState(false)
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
+  const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const {
     app_name: appName,
@@ -467,6 +470,10 @@ export default function CollectionCard({
     }
 
     if (isInstalled) {
+      if (emulatorNeedsRomPick(meta)) {
+        setPickRomOpen(true)
+        return
+      }
       const isOffline = connectivity.status !== 'online'
       await launch({
         appName,
@@ -578,6 +585,29 @@ export default function CollectionCard({
           metadata={metadata}
           onChange={onMetadataChange}
           onClose={() => setMetadataOpen(false)}
+        />
+      )}
+      {pickRomOpen && meta?.roms && (
+        <PickRomDialog
+          title={title}
+          roms={meta.roms}
+          selectedPath={meta.selectedRomPath}
+          onClose={() => setPickRomOpen(false)}
+          onPlay={(romPath) => {
+            setPickRomOpen(false)
+            void (async () => {
+              await prepareEmulatorLaunch(appName, romPath)
+              const isOffline = connectivity.status !== 'online'
+              await launch({
+                appName,
+                t,
+                runner,
+                hasUpdate,
+                showDialogModal,
+                notPlayableOffline: isOffline && !gameInfo.canRunOffline
+              })
+            })()
+          }}
         />
       )}
       <CollectionContextMenu

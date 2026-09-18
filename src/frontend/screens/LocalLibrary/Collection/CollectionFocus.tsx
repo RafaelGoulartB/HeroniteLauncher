@@ -45,6 +45,8 @@ import { collectionCoverSrc, collectionStageArt } from './steamArt'
 import { sanitizeSteamDescription } from './steamHtml'
 import CollectionGameArtDialog from './CollectionGameArtDialog'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
+import PickRomDialog from './PickRomDialog'
+import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
 import { collectionGameTitle } from './collectionTitle'
 import {
   EMPTY_FACET_FILTERS,
@@ -268,6 +270,7 @@ function CollectionFocusPanel({
   } = useContext(ContextProvider)
   const [artOpen, setArtOpen] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
+  const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const [gameInfo, setGameInfo] = useState<GameInfo>(game)
   const [extraInfo, setExtraInfo] = useState<ExtraInfo | null>(
@@ -497,6 +500,10 @@ function CollectionFocusPanel({
       return window.api.removeFromDMQueue(appName)
     }
     if (isInstalled) {
+      if (emulatorNeedsRomPick(meta)) {
+        setPickRomOpen(true)
+        return
+      }
       const isOffline = connectivity.status !== 'online'
       await launch({
         appName,
@@ -851,6 +858,29 @@ function CollectionFocusPanel({
           metadata={metadata}
           onChange={onMetadataChange}
           onClose={() => setMetadataOpen(false)}
+        />
+      )}
+      {pickRomOpen && meta?.roms && (
+        <PickRomDialog
+          title={title}
+          roms={meta.roms}
+          selectedPath={meta.selectedRomPath}
+          onClose={() => setPickRomOpen(false)}
+          onPlay={(romPath) => {
+            setPickRomOpen(false)
+            void (async () => {
+              await prepareEmulatorLaunch(appName, romPath)
+              const isOffline = connectivity.status !== 'online'
+              await launch({
+                appName,
+                t: tGame,
+                runner,
+                hasUpdate,
+                showDialogModal,
+                notPlayableOffline: isOffline && !gameInfo.canRunOffline
+              })
+            })()
+          }}
         />
       )}
     </aside>

@@ -27,6 +27,7 @@ import {
 } from './playnite/mapper'
 import { collectWindowsDrives } from './playnite/path-remap'
 import { loadPlayniteLibrary, PlayniteGame } from './playnite/reader'
+import { ensurePlayniteEmulator } from './emulation/playnite'
 import {
   findMetaByPlayniteId,
   countNewLocalSessions,
@@ -141,6 +142,14 @@ function mergeExistingMeta(
     storeGameId: incoming.storeGameId ?? existed.storeGameId,
     windowsInstallDirectory: incoming.windowsInstallDirectory,
     windowsExecutable: incoming.windowsExecutable,
+    remappedExecutable:
+      incoming.remappedExecutable ?? existed.remappedExecutable,
+    launcherArgs: incoming.launcherArgs ?? existed.launcherArgs,
+    roms: incoming.roms ?? existed.roms,
+    emulatorName: incoming.emulatorName ?? existed.emulatorName,
+    emulatorId: incoming.emulatorId ?? existed.emulatorId,
+    emulatorProfileId: incoming.emulatorProfileId ?? existed.emulatorProfileId,
+    platformId: incoming.platformId ?? existed.platformId,
     playniteCompletionStatusId: incoming.playniteCompletionStatusId,
     completionStatusId: incoming.completionStatusId
   }
@@ -274,6 +283,23 @@ export async function importPlayniteLibrary(
     try {
       const sessions = playniteSessionsToLocal(game.id, dump.sessionsByGameId)
       const mapped = mapPlayniteGame(game, dump.emulators, sessions, driveMap)
+      if (mapped.meta.launchKind === 'emulator' && mapped.meta.emulatorId) {
+        const playniteEmu = dump.emulators.find(
+          (item) => item.id === mapped.meta.emulatorId
+        )
+        if (playniteEmu) {
+          const user = ensurePlayniteEmulator(playniteEmu, driveMap)
+          if (user) {
+            mapped.meta.emulatorId = user.id
+            mapped.meta.emulatorProfileId =
+              user.profiles.find(
+                (item) => item.id === mapped.meta.emulatorProfileId
+              )?.id ?? user.profiles[0]?.id
+            mapped.meta.emulatorName = user.name
+            mapped.meta.remappedExecutable = user.executable
+          }
+        }
+      }
       const destination = destinationFor(mapped)
       const existed = findMetaByPlayniteId(game.id)
       mapped.meta.completionStatusId = existed
@@ -399,7 +425,9 @@ export async function importPlayniteLibrary(
         game,
         libraryPath: dump.libraryPath
       })
-      await applyLauncherArgs(mapped.meta.appName, mapped.meta.launcherArgs)
+      if (mapped.meta.launchKind !== 'emulator') {
+        await applyLauncherArgs(mapped.meta.appName, mapped.meta.launcherArgs)
+      }
       result.sessionsImported += mapped.sessions.length
       if (existed) result.updated += 1
       else result.imported += 1

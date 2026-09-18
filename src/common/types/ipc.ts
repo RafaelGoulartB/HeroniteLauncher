@@ -86,7 +86,15 @@ import type {
   CollectionMetadataPreview,
   CollectionMetadataSearchHit,
   CollectionMetadataSettings,
-  IgdbCredentialTest
+  IgdbCredentialTest,
+  EmulationState,
+  RomScanImportArgs,
+  RomScanImportResult,
+  RomScanPreview,
+  RomScanner,
+  UpsertRomScannerArgs,
+  UpsertUserEmulatorArgs,
+  UserEmulator
 } from './local-library'
 
 // ts-prune-ignore-next
@@ -377,6 +385,26 @@ interface AsyncIPCFunctions {
     appName: string
     runner: Runner
   }) => Promise<{ ok: boolean; error?: string }>
+  getEmulationState: (refreshDetect?: boolean) => Promise<EmulationState>
+  detectCollectionEmulators: () => Promise<EmulationState>
+  addDetectedEmulators: () => Promise<UserEmulator[]>
+  upsertUserEmulator: (args: UpsertUserEmulatorArgs) => Promise<UserEmulator>
+  removeUserEmulator: (id: string) => Promise<UserEmulator[]>
+  upsertRomScanner: (args: UpsertRomScannerArgs) => Promise<RomScanner>
+  removeRomScanner: (id: string) => Promise<RomScanner[]>
+  previewRomScan: (args: {
+    emulatorId: string
+    profileId: string
+    directory: string
+    scanSubfolders?: boolean
+    mergeRelatedFiles?: boolean
+  }) => Promise<RomScanPreview>
+  importRomScan: (args: RomScanImportArgs) => Promise<RomScanImportResult>
+  runRomScanners: () => Promise<number>
+  setEmulatorLaunchRom: (args: {
+    appName: string
+    romPath: string
+  }) => Promise<LocalGameMeta | undefined>
   launch: (args: LaunchParams) => StatusPromise
   openDialog: (args: OpenDialogOptions) => Promise<string | false>
   install: (args: InstallParams) => Promise<void>

@@ -328,8 +328,7 @@ export default function CollectionMetadataDialog({
               if (options.length <= 1 && !options[0]?.value) return null
               const selectedPick =
                 picks[field] || preview.proposed.fieldSources[field] || 'keep'
-              const selected =
-                selectedPick === 'manual' ? 'keep' : selectedPick
+              const selected = selectedPick === 'manual' ? 'keep' : selectedPick
               return (
                 <section
                   key={field}

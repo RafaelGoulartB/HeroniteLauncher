@@ -9,7 +9,9 @@ import type {
   LudusaviBackupFormat,
   LudusaviCompression,
   MetadataField,
-  MetadataSourceId
+  MetadataSourceId,
+  RomScanner,
+  UserEmulator
 } from 'common/types/local-library'
 import {
   DEFAULT_FIELD_PRIORITY,
@@ -30,15 +32,21 @@ import {
   DialogHeader
 } from 'frontend/components/UI/Dialog'
 import { MenuItem, Tab, Tabs } from '@mui/material'
+import EmulatorManager from './EmulatorManager'
 import './CollectionSettingsDialog.css'
 
 type Props = {
   onClose: () => void
   onSettingsChange?: (settings: CollectionSettings) => void
   onOpenMetadataWizard?: () => void
+  onOpenScan?: (seed?: {
+    emulatorId?: string
+    profileId?: string
+    directory?: string
+  }) => void
 }
 
-type SettingsTab = 'appearance' | 'metadata' | 'backup' | 'saves'
+type SettingsTab = 'appearance' | 'metadata' | 'emulators' | 'backup' | 'saves'
 
 function formatBackupTime(value?: string) {
   if (!value) return ''
@@ -69,7 +77,8 @@ const FIELD_LABELS: Record<MetadataField, string> = {
 export default function CollectionSettingsDialog({
   onClose,
   onSettingsChange,
-  onOpenMetadataWizard
+  onOpenMetadataWizard,
+  onOpenScan
 }: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
@@ -325,6 +334,10 @@ export default function CollectionSettingsDialog({
             value="metadata"
           />
           <Tab
+            label={t('collection.settings.tab.emulators', 'Emulators')}
+            value="emulators"
+          />
+          <Tab
             label={t('collection.settings.tab.backup', 'Backup')}
             value="backup"
           />
@@ -509,6 +522,19 @@ export default function CollectionSettingsDialog({
               </div>
             </details>
           </section>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index="emulators">
+          <EmulatorManager
+            onScan={(scanner?: RomScanner, emulator?: UserEmulator) => {
+              onClose()
+              onOpenScan?.({
+                emulatorId: emulator?.id ?? scanner?.emulatorId,
+                profileId: scanner?.profileId,
+                directory: scanner?.directory
+              })
+            }}
+          />
         </TabPanel>
 
         <TabPanel value={activeTab} index="backup">
