@@ -50,6 +50,7 @@ import {
 } from './steamArt'
 import { sanitizeSteamDescription } from './steamHtml'
 import CollectionGameArtDialog from './CollectionGameArtDialog'
+import CollectionHowLongToBeat from './CollectionHowLongToBeat'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
 import CollectionRelatedGames from './CollectionRelatedGames'
 import CollectionScreenshots from './CollectionScreenshots'
@@ -166,14 +167,6 @@ function toPlainText(value?: string) {
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-function formatHours(value?: number) {
-  if (!value) return ''
-  const hours = Math.floor(value)
-  const mins = Math.round((value - hours) * 60)
-  if (!mins) return `${hours}h`
-  return `${hours}h ${mins}m`
 }
 
 function formatTimestamp(value?: string) {
@@ -723,35 +716,6 @@ function CollectionFocusPanel({
               </section>
             )}
 
-            {howLong && (howLong.mainStory || howLong.mainExtra) && (
-              <section className="collectionFocus__panel">
-                <h3>{tGame('howLongToBeat', 'How Long To Beat')}</h3>
-                <dl className="collectionFocus__hltb">
-                  <div>
-                    <dt>
-                      {tGame('how-long-to-beat.main-story', 'Main Story')}
-                    </dt>
-                    <dd>{formatHours(howLong.mainStory)}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      {tGame(
-                        'how-long-to-beat.main-plus-extras',
-                        'Main + Extras'
-                      )}
-                    </dt>
-                    <dd>{formatHours(howLong.mainExtra)}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      {tGame('how-long-to-beat.completionist', 'Completionist')}
-                    </dt>
-                    <dd>{formatHours(howLong.completionist)}</dd>
-                  </div>
-                </dl>
-              </section>
-            )}
-
             <section className="collectionFocus__details">
               <h3>{t('collection.focus.details', 'Details')}</h3>
               <div className="collectionFocus__panel collectionFocus__panel--facts">
@@ -881,6 +845,13 @@ function CollectionFocusPanel({
                 </dl>
               </div>
             </section>
+
+            {howLong && (howLong.mainStory || howLong.mainExtra) && (
+              <CollectionHowLongToBeat
+                info={howLong}
+                playedMinutes={playedMinutes}
+              />
+            )}
           </div>
         </div>
       </div>

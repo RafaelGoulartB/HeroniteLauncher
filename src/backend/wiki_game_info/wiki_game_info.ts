@@ -12,17 +12,30 @@ import { getUmuId } from './umu/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
 
-export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
+const hltbCacheRefreshTried = new Set<string>()
+
+export async function getWikiGameInfo(
+  game: Game,
+  preferredTitle?: string
+): Promise<WikiInfo | null> {
   const gameInfo = game.getGameInfo()
   const appName = gameInfo.app_name
   const runner = gameInfo.runner
+  const lookupTitle = preferredTitle?.trim() || gameInfo.title
 
   try {
-    const title = removeSpecialcharacters(gameInfo.title)
+    if (!lookupTitle) {
+      return null
+    }
 
-    // check if we have a cached response
-    const cachedResponse = wikiGameInfoStore.get(title)
-    if (cachedResponse) {
+    const title = removeSpecialcharacters(lookupTitle)
+    const fallbackTitle = removeSpecialcharacters(gameInfo.title || '')
+    const cachedResponse =
+      wikiGameInfoStore.get(title) ??
+      (fallbackTitle && fallbackTitle !== title
+        ? wikiGameInfoStore.get(fallbackTitle)
+        : undefined)
+    if (cachedResponse?.howlongtobeat) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
         LogPrefix.ExtraGameInfo
@@ -30,10 +43,47 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
       return cachedResponse
     }
 
+    if (cachedResponse && hltbCacheRefreshTried.has(title)) {
+      logInfo(
+        [`Using cached ExtraGameInfo data for ${title}`],
+        LogPrefix.ExtraGameInfo
+      )
+      return cachedResponse
+    }
+
+    if (cachedResponse) {
+      hltbCacheRefreshTried.add(title)
+      logInfo(
+        [`Refreshing HowLongToBeat data for ${title}`],
+        LogPrefix.ExtraGameInfo
+      )
+      const pcgamingwiki =
+        cachedResponse.pcgamingwiki ??
+        (await getInfoFromPCGamingWiki(
+          lookupTitle,
+          runner === 'gog' ? appName : undefined
+        ))
+      const howlongtobeat = await getHowLongToBeat(
+        game,
+        pcgamingwiki?.howLongToBeatID,
+        lookupTitle
+      )
+      const refreshed = {
+        ...cachedResponse,
+        pcgamingwiki,
+        howlongtobeat
+      }
+      wikiGameInfoStore.set(title, refreshed)
+      return refreshed
+    }
+
     logInfo(`Getting ExtraGameInfo data for ${title}`, LogPrefix.ExtraGameInfo)
 
     const [pcgamingwiki, gamesdb, applegamingwiki, umuId] = await Promise.all([
-      getInfoFromPCGamingWiki(title, runner === 'gog' ? appName : undefined),
+      getInfoFromPCGamingWiki(
+        lookupTitle,
+        runner === 'gog' ? appName : undefined
+      ),
       getInfoFromGamesDB(title, appName, runner),
       isMac ? getInfoFromAppleGamingWiki(title) : null,
       isLinux ? getUmuId(appName, runner) : null
@@ -42,7 +92,8 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
     // Get HowLongToBeat data, using gog.com site for GOG games, and HLTB ID from PCGamingWiki if available
     const howlongtobeat = await getHowLongToBeat(
       game,
-      pcgamingwiki?.howLongToBeatID
+      pcgamingwiki?.howLongToBeatID,
+      lookupTitle
     )
 
     let steamInfo = null
