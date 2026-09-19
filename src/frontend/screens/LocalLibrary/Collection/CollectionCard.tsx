@@ -51,7 +51,6 @@ import PlayIcon from 'frontend/assets/play-icon.svg?react'
 import StopIconAlt from 'frontend/assets/stop-icon-alt.svg?react'
 import DownIcon from 'frontend/assets/down-icon.svg?react'
 import { getCardStatus } from 'frontend/screens/Library/components/GameCard/constants'
-import fallBackImage from 'frontend/assets/heroic_card.jpg'
 import {
   formatPlaytimeMinutes,
   onPlaytimeChanged,
@@ -63,7 +62,7 @@ import CollectionMetadataDialog from './CollectionMetadataDialog'
 import CollectionPlaytimeDialog from './CollectionPlaytimeDialog'
 import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
-import { collectionCoverSrc } from './steamArt'
+import { collectionCoverSources } from './steamArt'
 import { collectionGameTitle } from './collectionTitle'
 import PickRomDialog from './PickRomDialog'
 import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
@@ -128,7 +127,7 @@ function CollectionCardActive({
     install: gameInstallInfo
   } = { ...gameInfoFromProps }
   const title = collectionGameTitle(gameInfoFromProps, metadata)
-  const cover = collectionCoverSrc(
+  const cover = collectionCoverSources(
     gameInfoFromProps,
     collectionArt,
     meta?.steamAppId,
@@ -772,9 +771,9 @@ function CollectionCardActive({
               }
             >
               <CachedImage
-                key={cover}
-                src={cover}
-                fallback={fallBackImage}
+                key={cover.src}
+                src={cover.src}
+                fallback={cover.fallback}
                 className={classNames('collectionCard__image', {
                   installed: isInstalled
                 })}

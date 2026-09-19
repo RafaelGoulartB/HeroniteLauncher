@@ -5,12 +5,12 @@ import type {
 } from 'common/types/local-library'
 import { facetKey, gameFacets } from './collectionFacets'
 import { collectionGameTitle } from './collectionTitle'
-import { collectionCoverSrc } from './steamArt'
+import { collectionCoverSources } from './steamArt'
 
 export type RelatedGameItem = {
   game: GameInfo
   title: string
-  cover: string
+  cover: { src: string; fallback: string[] }
 }
 
 export type RelatedGamesGroupKind = 'series' | 'developer'
@@ -72,7 +72,7 @@ export function collectRelatedGames(args: {
     const item: RelatedGameItem = {
       game,
       title: collectionGameTitle(game, metadata),
-      cover: collectionCoverSrc(
+      cover: collectionCoverSources(
         game,
         args.artFor(game),
         args.steamAppIdFor(game),

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { ExpandMore } from '@mui/icons-material'
 import type { GameInfo } from 'common/types'
 import { CachedImage } from 'frontend/components/UI'
-import fallBackImage from 'frontend/assets/heroic_card.jpg'
 import type { RelatedGamesGroup } from './relatedGames'
 import './CollectionRelatedGames.css'
 
@@ -68,8 +67,8 @@ export default function CollectionRelatedGames({
                       onClick={() => onSelect(item.game)}
                     >
                       <CachedImage
-                        src={item.cover}
-                        fallback={fallBackImage}
+                        src={item.cover.src}
+                        fallback={item.cover.fallback}
                         className="collectionRelated__cover"
                         alt=""
                       />

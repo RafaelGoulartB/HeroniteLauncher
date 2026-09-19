@@ -38,7 +38,6 @@ import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import { hasStatus } from 'frontend/hooks/hasStatus'
 import { getCardStatus } from 'frontend/screens/Library/components/GameCard/constants'
-import fallBackImage from 'frontend/assets/heroic_card.jpg'
 import {
   formatPlaytimeMinutes,
   onPlaytimeChanged,
@@ -49,6 +48,7 @@ import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
 import {
   collectionArtKey,
+  collectionCoverSources,
   collectionCoverSrc,
   collectionMetadataKey,
   collectionStageArt
@@ -440,13 +440,12 @@ function CollectionFocusPanel({
     statuses.find((item) => item.id === (meta?.completionStatusId ?? '')) ??
     statuses.find((item) => item.slug === 'not-played')
 
-  const cover =
-    collectionCoverSrc(
-      gameInfo,
-      collectionArt,
-      storeAppId,
-      metadata?.coverUrl
-    ) || fallBackImage
+  const cover = collectionCoverSources(
+    gameInfo,
+    collectionArt,
+    storeAppId,
+    metadata?.coverUrl
+  )
   const defaultCover = collectionCoverSrc(gameInfo, undefined, storeAppId)
   const defaultHero = collectionStageArt(gameInfo, meta, cachedHeroUrl)?.src
   const useSteamHtml =
@@ -663,9 +662,9 @@ function CollectionFocusPanel({
             </p>
           </div>
           <CachedImage
-            key={cover}
-            src={cover}
-            fallback={fallBackImage}
+            key={cover.src}
+            src={cover.src}
+            fallback={cover.fallback}
             className="collectionFocus__cover"
             alt=""
           />
