@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import {
   Close,
   Download,
-  Edit,
   FolderOpen,
   OpenInNew,
   PlayArrow,
@@ -38,11 +37,7 @@ import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import { hasStatus } from 'frontend/hooks/hasStatus'
 import { getCardStatus } from 'frontend/screens/Library/components/GameCard/constants'
-import {
-  formatPlaytimeMinutes,
-  onPlaytimeChanged,
-  setPlaytimeMinutes
-} from './playtime'
+import { formatPlaytimeMinutes, onPlaytimeChanged } from './playtime'
 import { STATUS_COLORS } from './statusColors'
 import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
@@ -57,7 +52,6 @@ import { sanitizeSteamDescription } from './steamHtml'
 import CollectionGameArtDialog from './CollectionGameArtDialog'
 import CollectionHowLongToBeat from './CollectionHowLongToBeat'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
-import CollectionPlaytimeDialog from './CollectionPlaytimeDialog'
 import CollectionRelatedGames from './CollectionRelatedGames'
 import CollectionScreenshots from './CollectionScreenshots'
 import PickRomDialog from './PickRomDialog'
@@ -308,7 +302,6 @@ function CollectionFocusPanel({
   } = useContext(ContextProvider)
   const [artOpen, setArtOpen] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
-  const [playtimeOpen, setPlaytimeOpen] = useState(false)
   const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const [gameInfo, setGameInfo] = useState<GameInfo>(game)
@@ -409,17 +402,16 @@ function CollectionFocusPanel({
   )
 
   useEffect(() => {
-    if (!artOpen && !metadataOpen && !playtimeOpen) return
+    if (!artOpen && !metadataOpen) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.stopImmediatePropagation()
       setArtOpen(false)
       setMetadataOpen(false)
-      setPlaytimeOpen(false)
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [artOpen, metadataOpen, playtimeOpen])
+  }, [artOpen, metadataOpen])
 
   useEffect(() => {
     setPlayedMinutes(timestampStore.get_nodefault(appName)?.totalPlayed ?? 0)
@@ -801,19 +793,7 @@ function CollectionFocusPanel({
                   </div>
                   <div>
                     <dt>{t('collection.sort.playtime', 'Playtime')}</dt>
-                    <dd className="collectionFocus__playtime">
-                      <span>{formatPlaytimeMinutes(playedMinutes)}</span>
-                      {!isTrackingTime && (
-                        <button
-                          type="button"
-                          className="collectionFocus__playtimeEdit"
-                          title={t('collection.playtime.edit', 'Edit playtime')}
-                          onClick={() => setPlaytimeOpen(true)}
-                        >
-                          <Edit />
-                        </button>
-                      )}
-                    </dd>
+                    <dd>{formatPlaytimeMinutes(playedMinutes)}</dd>
                   </div>
                   {installPath && (
                     <div className="is-split">
@@ -961,17 +941,6 @@ function CollectionFocusPanel({
           metadata={metadata}
           onChange={onMetadataChange}
           onClose={() => setMetadataOpen(false)}
-        />
-      )}
-      {playtimeOpen && (
-        <CollectionPlaytimeDialog
-          title={title}
-          minutes={playedMinutes}
-          onClose={() => setPlaytimeOpen(false)}
-          onSave={(minutes) => {
-            setPlaytimeMinutes(appName, minutes)
-            setPlaytimeOpen(false)
-          }}
         />
       )}
       {pickRomOpen && meta?.roms && (
