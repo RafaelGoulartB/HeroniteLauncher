@@ -72,6 +72,7 @@ import type {
   CollectionGameArt,
   CollectionWebImage,
   CollectionWebImageSearchArgs,
+  CollectionBackgroundSettings,
   CollectionBackupInterval,
   CollectionBackupResult,
   CollectionSettings,
@@ -328,7 +329,8 @@ interface AsyncIPCFunctions {
   }) => Promise<CollectionGameArt>
   getCollectionSettings: () => Promise<CollectionSettings>
   setCollectionUiSettings: (args: {
-    greyUninstalledGames: boolean
+    greyUninstalledGames?: boolean
+    background?: Partial<CollectionBackgroundSettings>
   }) => Promise<CollectionSettings>
   setCollectionScreenshotsSettings: (args: {
     folder: string

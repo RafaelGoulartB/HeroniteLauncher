@@ -661,11 +661,32 @@ export interface CollectionScreenshotCacheInfo {
   limitBytes: number
 }
 
+export interface CollectionBackgroundSettings {
+  enabled: boolean
+  /** Backdrop blur applied over the artwork, in pixels. */
+  blur: number
+  /** Dark tint over the artwork, 0-90%. */
+  dimming: number
+  /** Artwork saturation, 0-150%. */
+  saturation: number
+  /** Strength of the side/top/bottom gradients that protect the text, 0-150%. */
+  scrim: number
+}
+
+export const DEFAULT_COLLECTION_BACKGROUND: CollectionBackgroundSettings = {
+  enabled: true,
+  blur: 6,
+  dimming: 14,
+  saturation: 94,
+  scrim: 100
+}
+
 export interface CollectionSettings {
   backup: CollectionBackupSettings
   ludusavi: LudusaviSettings
   ludusaviDetected?: LudusaviDetectedConfig
   greyUninstalledGames: boolean
+  background: CollectionBackgroundSettings
   screenshots: CollectionScreenshotsSettings
   metadata: CollectionMetadataSettings
 }

@@ -18,8 +18,10 @@ import {
   CloudDownload,
   SportsEsports
 } from '@mui/icons-material'
+import type { CSSProperties } from 'react'
 import type { GameInfo } from 'common/types'
 import type {
+  CollectionBackgroundSettings,
   CollectionGameArt,
   CollectionGameMetadata,
   CollectionMetadataBulkProgress,
@@ -27,6 +29,7 @@ import type {
   CoverAspectPreset,
   LocalGameMeta
 } from 'common/types/local-library'
+import { DEFAULT_COLLECTION_BACKGROUND } from 'common/types/local-library'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { CachedImage } from 'frontend/components/UI'
 import { configStore, timestampStore } from 'frontend/helpers/electronStores'
@@ -226,6 +229,9 @@ export default function Collection() {
   const [stuckGroups, setStuckGroups] = useState<Set<string>>(() => new Set())
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [greyUninstalledGames, setGreyUninstalledGames] = useState(true)
+  const [background, setBackground] = useState<CollectionBackgroundSettings>(
+    DEFAULT_COLLECTION_BACKGROUND
+  )
   const [screenshotsFolder, setScreenshotsFolder] = useState('')
   const [sidebarHidden, setSidebarHidden] = useState(readSidebarHidden)
   const [focusedKey, setFocusedKey] = useState<string | null>(readFocusedKey)
@@ -303,6 +309,7 @@ export default function Collection() {
     setCollectionArt(nextArt)
     setCollectionMetadata(nextMetadata)
     setGreyUninstalledGames(nextSettings.greyUninstalledGames !== false)
+    setBackground(nextSettings.background ?? DEFAULT_COLLECTION_BACKGROUND)
     setScreenshotsFolder(nextSettings.screenshots?.folder ?? '')
     setCoverAspect(nextSettings.metadata?.coverAspect || 'steam')
   }
@@ -615,6 +622,13 @@ export default function Collection() {
     }
   }
 
+  const backgroundStyle = {
+    '--collection-bg-blur': `${background.blur}px`,
+    '--collection-bg-dim': background.dimming / 100,
+    '--collection-bg-saturate': background.saturation / 100,
+    '--collection-bg-scrim': background.scrim / 100
+  } as CSSProperties
+
   function renderCards(list: GameInfo[]) {
     return list.map((game) => (
       <CollectionCard
@@ -661,8 +675,9 @@ export default function Collection() {
         'collection--greyUninstalled': greyUninstalledGames
       })}
       data-cover-aspect={coverAspect}
+      style={backgroundStyle}
     >
-      {paintedArt && (
+      {background.enabled && paintedArt && (
         <div className="collection__stage" aria-hidden>
           <CachedImage
             key={paintedArt.src}
@@ -914,9 +929,12 @@ export default function Collection() {
           onClose={() => setSettingsOpen(false)}
           onSettingsChange={(next) => {
             setGreyUninstalledGames(next.greyUninstalledGames !== false)
+            setBackground(next.background ?? DEFAULT_COLLECTION_BACKGROUND)
             setCoverAspect(next.metadata?.coverAspect || 'steam')
             setScreenshotsFolder(next.screenshots?.folder ?? '')
           }}
+          onBackgroundPreview={setBackground}
+          previewArt={paintedArt?.src}
           onOpenMetadataWizard={() => {
             setSettingsOpen(false)
             setBulkDismissed(false)
