@@ -18,6 +18,7 @@ import {
   DialogHeader
 } from 'frontend/components/UI/Dialog'
 import CollectionWebImageDialog from './CollectionWebImageDialog'
+import CollectionScreenshotArtDialog from './CollectionScreenshotArtDialog'
 import CollectionTagField from './CollectionTagField'
 import { EMPTY_TAG_OPTIONS, type CollectionTagKind } from './collectionTags'
 import './CollectionGameArtDialog.css'
@@ -156,7 +157,16 @@ export default function CollectionGameArtDialog({
     CollectionArtKind | 'clear' | 'details' | null
   >(null)
   const [searchKind, setSearchKind] = useState<CollectionArtKind | null>(null)
+  const [screenshotKind, setScreenshotKind] =
+    useState<CollectionArtKind | null>(null)
   const [error, setError] = useState('')
+  const screenshotAliases = useMemo(
+    () =>
+      [game.title, game.folder_name].filter((item): item is string =>
+        Boolean(item && item !== title)
+      ),
+    [game.folder_name, game.title, title]
+  )
   const initialForm = useMemo(
     () => formFrom(title, metadata, meta),
     [title, metadata, meta]
@@ -413,6 +423,14 @@ export default function CollectionGameArtDialog({
                   <button
                     type="button"
                     className="button outline"
+                    disabled={Boolean(busy)}
+                    onClick={() => setScreenshotKind('hero')}
+                  >
+                    {t('collection.gameArt.screenshot', 'Screenshot')}
+                  </button>
+                  <button
+                    type="button"
+                    className="button outline"
                     disabled={Boolean(busy) || !art?.heroUrl}
                     onClick={() => void reset('hero')}
                   >
@@ -607,6 +625,17 @@ export default function CollectionGameArtDialog({
           kind={searchKind}
           onChange={onChange}
           onClose={() => setSearchKind(null)}
+        />
+      )}
+      {screenshotKind && (
+        <CollectionScreenshotArtDialog
+          game={game}
+          title={title}
+          kind={screenshotKind}
+          steamAppId={meta?.steamAppId}
+          aliases={screenshotAliases}
+          onChange={onChange}
+          onClose={() => setScreenshotKind(null)}
         />
       )}
     </>

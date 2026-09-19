@@ -221,6 +221,13 @@ function applyArtFile(
   return writeArt(runner, appName, current)
 }
 
+function resolveArtSourcePath(sourcePath: string) {
+  if (sourcePath.startsWith('localart:')) {
+    return localArtFilePath(sourcePath)
+  }
+  return sourcePath
+}
+
 export function setCollectionGameArt(args: {
   appName: string
   runner: Runner
@@ -228,16 +235,20 @@ export function setCollectionGameArt(args: {
   sourcePath: string
 }): CollectionGameArt {
   const { appName, runner, kind, sourcePath } = args
-  const ext = normalizeExt(extname(sourcePath))
+  const resolvedPath = resolveArtSourcePath(sourcePath)
+  if (!resolvedPath) {
+    throw new Error(`Image not found: ${sourcePath}`)
+  }
+  const ext = normalizeExt(extname(resolvedPath))
   if (!ALLOWED_EXT.has(ext)) {
     throw new Error(`Unsupported image type: ${ext || 'unknown'}`)
   }
-  if (!existsSync(sourcePath)) {
-    throw new Error(`Image not found: ${sourcePath}`)
+  if (!existsSync(resolvedPath)) {
+    throw new Error(`Image not found: ${resolvedPath}`)
   }
 
   const dest = destFile(runner, appName, kind, ext)
-  copyFileSync(sourcePath, dest)
+  copyFileSync(resolvedPath, dest)
   return applyArtFile(runner, appName, kind, dest)
 }
 
