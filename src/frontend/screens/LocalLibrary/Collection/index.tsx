@@ -60,6 +60,7 @@ import {
 } from './steamArt'
 import { collectionGameTitle } from './collectionTitle'
 import { collectTagOptions } from './collectionTags'
+import { getPlaytimeMinutes, onPlaytimeChanged } from './playtime'
 import './index.css'
 
 const INSTALL_FILTER_KEY = 'collection_install_filter'
@@ -171,10 +172,6 @@ function gameKey(game: GameInfo) {
   return `${game.runner}_${game.app_name}`
 }
 
-function playtimeMinutes(appName: string): number {
-  return timestampStore.get_nodefault(appName)?.totalPlayed ?? 0
-}
-
 function lastPlayedAt(appName: string): string {
   return timestampStore.get_nodefault(appName)?.lastPlayed ?? ''
 }
@@ -256,6 +253,7 @@ export default function Collection() {
   const [recentAppNames, setRecentAppNames] = useState<Set<string>>(
     () => new Set()
   )
+  const [playtimes, setPlaytimes] = useState<Record<string, number>>({})
   const listRef = useRef<HTMLDivElement | null>(null)
 
   const handleSearch = useCallback((text: string) => {
@@ -398,6 +396,19 @@ export default function Collection() {
     hiddenGames.list
   ])
 
+  useEffect(() => {
+    const refresh = () => {
+      const next: Record<string, number> = {}
+      for (const game of games) {
+        const minutes = getPlaytimeMinutes(game.app_name)
+        if (minutes) next[game.app_name] = minutes
+      }
+      setPlaytimes(next)
+    }
+    refresh()
+    return onPlaytimeChanged(refresh)
+  }, [games])
+
   const filtered = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase()
     const next = games.filter((game) => {
@@ -417,7 +428,8 @@ export default function Collection() {
 
     return next.sort((a, b) => {
       if (sort === 'playtime') {
-        const delta = playtimeMinutes(b.app_name) - playtimeMinutes(a.app_name)
+        const delta =
+          (playtimes[b.app_name] ?? 0) - (playtimes[a.app_name] ?? 0)
         if (delta) return delta
       }
       if (sort === 'lastPlayed') {
@@ -446,7 +458,8 @@ export default function Collection() {
     installFilter,
     sort,
     collectionMetadata,
-    facetFilters
+    facetFilters,
+    playtimes
   ])
 
   const facetOptions = useMemo(

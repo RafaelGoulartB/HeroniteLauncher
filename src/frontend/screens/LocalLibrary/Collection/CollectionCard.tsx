@@ -52,10 +52,15 @@ import StopIconAlt from 'frontend/assets/stop-icon-alt.svg?react'
 import DownIcon from 'frontend/assets/down-icon.svg?react'
 import { getCardStatus } from 'frontend/screens/Library/components/GameCard/constants'
 import fallBackImage from 'frontend/assets/heroic_card.jpg'
-import { formatPlaytimeMinutes } from './playtime'
+import {
+  formatPlaytimeMinutes,
+  onPlaytimeChanged,
+  setPlaytimeMinutes
+} from './playtime'
 import { STATUS_COLORS } from './statusColors'
 import CollectionContextMenu from './CollectionContextMenu'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
+import CollectionPlaytimeDialog from './CollectionPlaytimeDialog'
 import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
 import { collectionCoverSrc } from './steamArt'
@@ -113,6 +118,7 @@ function CollectionCardActive({
   const [gameInfo, setGameInfo] = useState<GameInfo>(gameInfoFromProps)
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
+  const [playtimeOpen, setPlaytimeOpen] = useState(false)
   const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const {
@@ -165,6 +171,15 @@ function CollectionCardActive({
     void updateInfo()
     setPlayedMinutes(timestampStore.get_nodefault(appName)?.totalPlayed)
   }, [status, appName, runner, isTrackingTime])
+
+  useEffect(
+    () =>
+      onPlaytimeChanged((changed) => {
+        if (changed !== appName) return
+        setPlayedMinutes(timestampStore.get_nodefault(appName)?.totalPlayed)
+      }),
+    [appName]
+  )
 
   useEffect(() => {
     if (!isTrackingTime) {
@@ -561,6 +576,17 @@ function CollectionCardActive({
           onClose={() => setMetadataOpen(false)}
         />
       )}
+      {playtimeOpen && (
+        <CollectionPlaytimeDialog
+          title={title}
+          minutes={playedMinutes ?? 0}
+          onClose={() => setPlaytimeOpen(false)}
+          onSave={(minutes) => {
+            setPlaytimeMinutes(appName, minutes)
+            setPlaytimeOpen(false)
+          }}
+        />
+      )}
       {pickRomOpen && meta?.roms && (
         <PickRomDialog
           title={title}
@@ -649,6 +675,12 @@ function CollectionCardActive({
             onclick: () => setMetadataOpen(true),
             show: true,
             icon: <TravelExplore />
+          },
+          {
+            label: t('collection.playtime.edit', 'Edit playtime'),
+            onclick: () => setPlaytimeOpen(true),
+            show: !isTrackingTime,
+            icon: <AccessTime />
           },
           {
             label: t('submenu.logs', 'Logs'),
