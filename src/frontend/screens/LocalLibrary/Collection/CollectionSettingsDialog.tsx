@@ -1,7 +1,12 @@
-import type { KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react'
-import { useEffect, useState } from 'react'
+import type {
+  CSSProperties,
+  KeyboardEvent as ReactKeyboardEvent,
+  SyntheticEvent
+} from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type {
+  CollectionBackgroundSettings,
   CollectionBackupInterval,
   CollectionMetadataSettings,
   CollectionScreenshotCacheInfo,
@@ -16,10 +21,12 @@ import type {
   UserEmulator
 } from 'common/types/local-library'
 import {
+  DEFAULT_COLLECTION_BACKGROUND,
   DEFAULT_FIELD_PRIORITY,
   METADATA_FIELDS
 } from 'common/types/local-library'
 import {
+  CachedImage,
   PathSelectionBox,
   SelectField,
   TabPanel,
@@ -27,6 +34,7 @@ import {
   ToggleSwitch,
   WarningMessage
 } from 'frontend/components/UI'
+import SliderField from 'frontend/components/UI/SliderField'
 import {
   Dialog,
   DialogContent,
@@ -40,6 +48,8 @@ import './CollectionSettingsDialog.css'
 type Props = {
   onClose: () => void
   onSettingsChange?: (settings: CollectionSettings) => void
+  onBackgroundPreview?: (background: CollectionBackgroundSettings) => void
+  previewArt?: string
   onOpenMetadataWizard?: () => void
   onOpenScan?: (seed?: {
     emulatorId?: string
@@ -48,7 +58,37 @@ type Props = {
   }) => void
 }
 
-type SettingsTab = 'appearance' | 'metadata' | 'emulators' | 'backup' | 'saves'
+type SettingsTab =
+  | 'appearance'
+  | 'screenshots'
+  | 'metadata'
+  | 'emulators'
+  | 'backup'
+  | 'saves'
+
+const BACKGROUND_PERSIST_DELAY = 250
+
+function backgroundVars(background: CollectionBackgroundSettings) {
+  return {
+    '--collection-bg-blur': `${background.blur}px`,
+    '--collection-bg-dim': background.dimming / 100,
+    '--collection-bg-saturate': background.saturation / 100,
+    '--collection-bg-scrim': background.scrim / 100
+  } as CSSProperties
+}
+
+function sameBackground(
+  a: CollectionBackgroundSettings,
+  b: CollectionBackgroundSettings
+) {
+  return (
+    a.enabled === b.enabled &&
+    a.blur === b.blur &&
+    a.dimming === b.dimming &&
+    a.saturation === b.saturation &&
+    a.scrim === b.scrim
+  )
+}
 
 function formatBackupTime(value?: string) {
   if (!value) return ''
@@ -106,6 +146,8 @@ const FIELD_LABELS: Record<MetadataField, string> = {
 export default function CollectionSettingsDialog({
   onClose,
   onSettingsChange,
+  onBackgroundPreview,
+  previewArt,
   onOpenMetadataWizard,
   onOpenScan
 }: Props) {
@@ -115,6 +157,11 @@ export default function CollectionSettingsDialog({
   const [folder, setFolder] = useState('')
   const [interval, setInterval] = useState<CollectionBackupInterval>('weekly')
   const [greyUninstalledGames, setGreyUninstalledGames] = useState(true)
+  const [background, setBackground] = useState<CollectionBackgroundSettings>(
+    DEFAULT_COLLECTION_BACKGROUND
+  )
+  const backgroundTimer = useRef<number | null>(null)
+  const pendingBackground = useRef<CollectionBackgroundSettings | null>(null)
   const [screenshotsFolder, setScreenshotsFolder] = useState('')
   const [screenshotCacheLimit, setScreenshotCacheLimit] = useState('500')
   const [screenshotCacheInfo, setScreenshotCacheInfo] =
@@ -164,6 +211,9 @@ export default function CollectionSettingsDialog({
     setLudusaviFormat(next.ludusavi.format)
     setLudusaviCompression(next.ludusavi.compression)
     setGreyUninstalledGames(next.greyUninstalledGames !== false)
+    if (!pendingBackground.current) {
+      setBackground(next.background ?? DEFAULT_COLLECTION_BACKGROUND)
+    }
     setScreenshotsFolder(next.screenshots?.folder ?? '')
     setScreenshotCacheLimit(String(next.screenshots.cacheLimitMb))
     setScreenshotCaptureEnabled(next.screenshots.captureEnabled)
@@ -180,21 +230,49 @@ export default function CollectionSettingsDialog({
     void reload()
   }, [])
 
-  async function persistUi(nextGrey = greyUninstalledGames) {
+  // Slider drags would otherwise write to disk on every frame, so the last
+  // value is flushed after a pause or when the dialog goes away.
+  useEffect(
+    () => () => {
+      if (backgroundTimer.current) window.clearTimeout(backgroundTimer.current)
+      if (pendingBackground.current) {
+        void window.api.localLibrary.setUiSettings({
+          background: pendingBackground.current
+        })
+      }
+    },
+    []
+  )
+
+  async function persistUi(patch: {
+    greyUninstalledGames?: boolean
+    background?: Partial<CollectionBackgroundSettings>
+  }) {
     setSaving(true)
     setError('')
     try {
-      const next = await window.api.localLibrary.setUiSettings({
-        greyUninstalledGames: nextGrey
-      })
+      const next = await window.api.localLibrary.setUiSettings(patch)
       setSettings(next)
       setGreyUninstalledGames(next.greyUninstalledGames)
+      if (!pendingBackground.current) setBackground(next.background)
       onSettingsChange?.(next)
     } catch (err) {
       setError(String(err))
     } finally {
       setSaving(false)
     }
+  }
+
+  function updateBackground(patch: Partial<CollectionBackgroundSettings>) {
+    const next = { ...background, ...patch }
+    setBackground(next)
+    onBackgroundPreview?.(next)
+    pendingBackground.current = next
+    if (backgroundTimer.current) window.clearTimeout(backgroundTimer.current)
+    backgroundTimer.current = window.setTimeout(() => {
+      pendingBackground.current = null
+      void persistUi({ background: next })
+    }, BACKGROUND_PERSIST_DELAY)
   }
 
   async function persistScreenshots(
@@ -435,6 +513,10 @@ export default function CollectionSettingsDialog({
             value="appearance"
           />
           <Tab
+            label={t('collection.settings.tab.screenshots', 'Screenshots')}
+            value="screenshots"
+          />
+          <Tab
             label={t('collection.settings.tab.metadata', 'Metadata')}
             value="metadata"
           />
@@ -454,6 +536,161 @@ export default function CollectionSettingsDialog({
 
         <TabPanel value={activeTab} index="appearance">
           <section className="CollectionSettingsDialog__section">
+            <h5 className="CollectionSettingsDialog__subheading">
+              {t('collection.settings.backgroundHeading', 'Page background')}
+            </h5>
+            <p className="CollectionSettingsDialog__meta">
+              {t(
+                'collection.settings.backgroundHelp',
+                'The artwork of the selected game fills the Collection page. Adjust the glass layer over it so text stays readable on bright artwork.'
+              )}
+            </p>
+            <div
+              className={`CollectionSettingsDialog__preview${
+                background.enabled ? '' : ' is-plain'
+              }`}
+              style={backgroundVars(background)}
+            >
+              {background.enabled && previewArt ? (
+                <CachedImage
+                  src={previewArt}
+                  className="CollectionSettingsDialog__previewArt"
+                  alt=""
+                />
+              ) : null}
+              {background.enabled && (
+                <div className="CollectionSettingsDialog__previewScrim" />
+              )}
+              <div className="CollectionSettingsDialog__previewText">
+                <strong>
+                  {t(
+                    'collection.settings.backgroundPreviewTitle',
+                    'Live preview'
+                  )}
+                </strong>
+                <span>
+                  {previewArt
+                    ? t(
+                        'collection.settings.backgroundPreviewBody',
+                        'Titles, details and tags sit on top of this layer.'
+                      )
+                    : t(
+                        'collection.settings.backgroundPreviewEmpty',
+                        'Select a game in Collection to preview its artwork here.'
+                      )}
+                </span>
+              </div>
+            </div>
+            <ToggleSwitch
+              htmlId="collection-background-enabled"
+              value={background.enabled}
+              disabled={saving}
+              handleChange={() =>
+                updateBackground({ enabled: !background.enabled })
+              }
+              title={t(
+                'collection.settings.backgroundEnabled',
+                'Use the game artwork as page background'
+              )}
+            />
+            <div className="CollectionSettingsDialog__sliders">
+              <SliderField
+                htmlId="collection-background-blur"
+                label={`${t('collection.settings.backgroundBlur', 'Blur')}: ${background.blur} px`}
+                value={background.blur}
+                min={0}
+                max={40}
+                step={1}
+                disabled={saving || !background.enabled}
+                onChange={(value) => updateBackground({ blur: value })}
+              />
+              <SliderField
+                htmlId="collection-background-dimming"
+                label={`${t('collection.settings.backgroundDimming', 'Darkening')}: ${background.dimming}%`}
+                value={background.dimming}
+                min={0}
+                max={90}
+                step={1}
+                disabled={saving || !background.enabled}
+                onChange={(value) => updateBackground({ dimming: value })}
+              />
+              <SliderField
+                htmlId="collection-background-saturation"
+                label={`${t('collection.settings.backgroundSaturation', 'Colour intensity')}: ${background.saturation}%`}
+                value={background.saturation}
+                min={0}
+                max={150}
+                step={1}
+                disabled={saving || !background.enabled}
+                onChange={(value) => updateBackground({ saturation: value })}
+              />
+              <SliderField
+                htmlId="collection-background-scrim"
+                label={`${t('collection.settings.backgroundScrim', 'Edge shading')}: ${background.scrim}%`}
+                value={background.scrim}
+                min={0}
+                max={150}
+                step={1}
+                disabled={saving || !background.enabled}
+                onChange={(value) => updateBackground({ scrim: value })}
+              />
+            </div>
+            <p className="CollectionSettingsDialog__meta">
+              {t(
+                'collection.settings.backgroundScrimHelp',
+                'Edge shading darkens the left column and the top and bottom edges, where the game list and the toolbars sit.'
+              )}
+            </p>
+            <div className="CollectionSettingsDialog__actions">
+              <button
+                type="button"
+                className="button outline"
+                disabled={
+                  saving ||
+                  sameBackground(background, DEFAULT_COLLECTION_BACKGROUND)
+                }
+                onClick={() =>
+                  updateBackground({ ...DEFAULT_COLLECTION_BACKGROUND })
+                }
+              >
+                {t(
+                  'collection.settings.backgroundReset',
+                  'Reset background to default'
+                )}
+              </button>
+            </div>
+          </section>
+
+          <section className="CollectionSettingsDialog__section">
+            <h5 className="CollectionSettingsDialog__subheading">
+              {t('collection.settings.coversHeading', 'Covers')}
+            </h5>
+            <SelectField
+              htmlId="collection-cover-aspect"
+              label={t('collection.metadata.coverAspect', 'Cover aspect')}
+              value={coverAspect}
+              disabled={saving}
+              onChange={(event) => {
+                const next = event.target.value as CoverAspectPreset
+                setCoverAspect(next)
+                void persistMetadata({ coverAspect: next })
+              }}
+            >
+              <MenuItem value="steam">Steam (2:3)</MenuItem>
+              <MenuItem value="igdb">IGDB (3:4)</MenuItem>
+              <MenuItem value="gog">GOG</MenuItem>
+              <MenuItem value="square">
+                {t('collection.metadata.square', 'Square')}
+              </MenuItem>
+              <MenuItem value="dvd">DVD (5:7)</MenuItem>
+              <MenuItem value="banner">Banner (16:9)</MenuItem>
+            </SelectField>
+            <p className="CollectionSettingsDialog__meta">
+              {t(
+                'collection.settings.coverAspectHelp',
+                'Shape used by every cover in the grid and in the details panel.'
+              )}
+            </p>
             <ToggleSwitch
               htmlId="collection-grey-uninstalled"
               value={greyUninstalledGames}
@@ -461,7 +698,7 @@ export default function CollectionSettingsDialog({
               handleChange={() => {
                 const next = !greyUninstalledGames
                 setGreyUninstalledGames(next)
-                void persistUi(next)
+                void persistUi({ greyUninstalledGames: next })
               }}
               title={t(
                 'collection.settings.greyUninstalled',
@@ -475,9 +712,15 @@ export default function CollectionSettingsDialog({
               )}
             </p>
           </section>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index="screenshots">
           <section className="CollectionSettingsDialog__section">
             <h5 className="CollectionSettingsDialog__subheading">
-              {t('collection.settings.screenshotsHeading', 'Screenshots')}
+              {t(
+                'collection.settings.screenshotsHeading',
+                'Screenshots folder'
+              )}
             </h5>
             <p className="CollectionSettingsDialog__meta">
               {t(
@@ -502,6 +745,12 @@ export default function CollectionSettingsDialog({
                 'Screenshots folder'
               )}
             />
+          </section>
+
+          <section className="CollectionSettingsDialog__section">
+            <h5 className="CollectionSettingsDialog__subheading">
+              {t('collection.settings.captureHeading', 'In-game capture')}
+            </h5>
             <ToggleSwitch
               htmlId="collection-screenshot-capture-enabled"
               disabled={saving}
@@ -575,6 +824,18 @@ export default function CollectionSettingsDialog({
                 {screenshotCaptureStatus.error}
               </p>
             )}
+          </section>
+
+          <section className="CollectionSettingsDialog__section">
+            <h5 className="CollectionSettingsDialog__subheading">
+              {t('collection.settings.previewCacheHeading', 'Preview cache')}
+            </h5>
+            <p className="CollectionSettingsDialog__meta">
+              {t(
+                'collection.settings.previewCacheHelp',
+                'Thumbnails generated so the screenshot gallery opens instantly. They are recreated on demand after clearing.'
+              )}
+            </p>
             <TextInputField
               htmlId="collection-screenshot-cache-limit"
               extraClass="CollectionSettingsDialog__cacheLimit"
@@ -697,26 +958,6 @@ export default function CollectionSettingsDialog({
             <h5 className="CollectionSettingsDialog__subheading">
               {t('collection.metadata.imagesHeading', 'Images & fields')}
             </h5>
-            <SelectField
-              htmlId="collection-cover-aspect"
-              label={t('collection.metadata.coverAspect', 'Cover aspect')}
-              value={coverAspect}
-              disabled={saving}
-              onChange={(event) => {
-                const next = event.target.value as CoverAspectPreset
-                setCoverAspect(next)
-                void persistMetadata({ coverAspect: next })
-              }}
-            >
-              <MenuItem value="steam">Steam (2:3)</MenuItem>
-              <MenuItem value="igdb">IGDB (3:4)</MenuItem>
-              <MenuItem value="gog">GOG</MenuItem>
-              <MenuItem value="square">
-                {t('collection.metadata.square', 'Square')}
-              </MenuItem>
-              <MenuItem value="dvd">DVD (5:7)</MenuItem>
-              <MenuItem value="banner">Banner (16:9)</MenuItem>
-            </SelectField>
             <ToggleSwitch
               htmlId="collection-metadata-autofill"
               value={autoFillMissing}

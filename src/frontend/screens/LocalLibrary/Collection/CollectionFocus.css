@@ -174,6 +174,7 @@
 .collectionFocus__overview h3,
 .collectionFocus__panel h3,
 .collectionFocus__details > h3,
+.collectionFocus__hltbCard > h3,
 .collectionScreenshots > h3 {
   margin: 0 0 0.55rem;
   font-size: 1.05rem;
@@ -290,12 +291,10 @@
   white-space: nowrap;
 }
 
-.collectionFocus__hltb,
 .collectionFocus__facts {
   margin: 0;
 }
 
-.collectionFocus__hltb > div,
 .collectionFocus__facts > div {
   display: grid;
   grid-template-columns: 8.4rem minmax(0, 1fr);
@@ -305,7 +304,6 @@
   align-items: start;
 }
 
-.collectionFocus__hltb dt,
 .collectionFocus__facts dt {
   color: rgba(255, 255, 255, 0.52);
   font-weight: 400;
@@ -321,26 +319,16 @@
   opacity: 0.72;
 }
 
-.collectionFocus__hltb dd,
 .collectionFocus__facts dd {
   margin: 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   color: rgba(255, 255, 255, 0.94);
   min-width: 0;
-}
-
-.collectionFocus__facts dd {
-  flex-wrap: wrap;
   overflow: visible;
   white-space: normal;
-}
-
-.collectionFocus__hltb dd {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .collectionFocus__facts > div.is-split {
@@ -402,6 +390,25 @@ button.collectionFocus__chip.is-active {
   color: rgba(255, 255, 255, 0.52);
 }
 
+.collectionFocus__playtimeEdit {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.52);
+  cursor: pointer;
+}
+
+.collectionFocus__playtimeEdit:hover {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.collectionFocus__playtimeEdit svg {
+  width: 14px;
+  height: 14px;
+}
+
 .collectionFocus__tags {
   max-height: 4.6rem;
   overflow: hidden;
@@ -417,6 +424,94 @@ button.collectionFocus__chip.is-active {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+button.collectionFocus__hltbPanel {
+  display: block;
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+button.collectionFocus__hltbPanel:hover {
+  background: rgba(18, 22, 28, 0.42);
+}
+
+.collectionFocus__hltbBar {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  margin: 0.35rem 0 1rem;
+  overflow: visible;
+}
+
+.collectionFocus__hltbBar span {
+  flex: 1;
+  min-width: 0;
+  border-radius: 99px;
+}
+
+.collectionFocus__hltbBar span.is-main {
+  background: #2aa9a0;
+}
+
+.collectionFocus__hltbBar span.is-extra {
+  background: #5b6ef5;
+}
+
+.collectionFocus__hltbBar span.is-complete {
+  background: #43b35c;
+}
+
+.collectionFocus__hltbMarker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 18px;
+  border-radius: 6px;
+  background: #1a1c20;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.collectionFocus__hltbStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.collectionFocus__hltbStats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.collectionFocus__hltbLabel {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.collectionFocus__hltbTime {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.42rem 0.35rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.48);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .collectionFocus__footer {

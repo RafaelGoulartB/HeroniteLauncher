@@ -1,28 +1,7 @@
 import { addHandler } from 'backend/ipc'
 import { logInfo, LogPrefix } from 'backend/logger'
-import { refreshMissingLocalCovers } from './covers'
-import {
-  importPlayniteLibrary,
-  mergePlayniteLibrary,
-  previewPlayniteImport,
-  previewPlayniteMerge
-} from './import'
-import { exportPlayniteLibrary } from './export'
 import { refreshLocalInstallStates } from './install-state'
-import { openSteamClientUri } from './steam'
-import {
-  clearCollectionGameArt,
-  getAllCollectionArt,
-  setCollectionGameArt,
-  setCollectionGameArtFromUrl
-} from './art'
-import { searchCollectionWebImages } from './web-images'
-import { cacheSteamHero, warmSteamHeroes } from './heroes'
-import { forceClearLocalPlaying } from './playtime-watch'
-import { removeCollectionGame } from './remove'
-import { getSteamAppDetails } from './steam-details'
 import { initLocalArtProtocol } from './protocol'
-import { maybeRunScheduledBackup, runCollectionBackup } from './backup'
 import {
   getCollectionSettings,
   setCollectionBackupSettings,
@@ -31,7 +10,6 @@ import {
   setCollectionUiSettings,
   setLudusaviSettings
 } from './settings'
-import { backupLudusaviForGame, detectLudusavi } from './ludusavi'
 import {
   backfillMissingGameStatuses,
   ensureDefaultStatuses,
@@ -48,58 +26,66 @@ import {
   getLocalSessions
 } from './stores'
 import {
-  applyGameMetadata,
-  cancelBulkMetadata,
-  getAllCollectionMetadata,
-  getBulkMetadataProgress,
-  getCollectionGameMetadata,
-  previewGameMetadata,
-  refreshMissingCollectionMetadata,
-  searchGameMetadata,
-  startBulkMetadata,
-  testIgdbCredentials,
-  updateCollectionGameDetails
-} from './metadata'
-import {
-  addDetectedEmulators,
-  autoScanRomFolders,
-  deleteRomScanner,
-  deleteUserEmulator,
-  getEmulationState,
-  importRoms,
-  saveRomScanner,
-  saveUserEmulator,
-  scanRomsPreview,
-  setEmulatorLaunchRom
-} from './emulation'
-import {
-  deleteCollectionScreenshot,
-  getCollectionScreenshots
-} from './screenshots'
-import {
   captureActiveGameScreenshot,
   configureScreenshotCaptureHotkey,
   getScreenshotCaptureStatus,
   initScreenshotCaptureService
 } from './screenshots/capture'
-import {
-  clearScreenshotThumbnailCache,
-  maintainScreenshotThumbnailCache
-} from './screenshots/thumbnails'
 
 let registered = false
+let idleWorkStarted = false
+
+async function withLudusaviDetection(settings = getCollectionSettings()) {
+  const { detectLudusavi } = await import('./ludusavi')
+  const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
+  return { ...settings, ludusaviDetected }
+}
+
+function scheduleIdleMaintenance() {
+  if (idleWorkStarted) return
+  idleWorkStarted = true
+  const timer = setTimeout(() => {
+    void (async () => {
+      const { autoScanRomFolders } = await import('./emulation')
+      const { refreshMissingLocalCovers } = await import('./covers')
+      const { refreshMissingCollectionMetadata } = await import('./metadata')
+      const { maintainScreenshotThumbnailCache } =
+        await import('./screenshots/thumbnails')
+      const { maybeRunScheduledBackup } = await import('./backup')
+      void autoScanRomFolders()
+      void refreshMissingLocalCovers()
+      void refreshMissingCollectionMetadata()
+      void maintainScreenshotThumbnailCache()
+      void maybeRunScheduledBackup()
+    })()
+  }, 90_000)
+  timer.unref()
+}
 
 export function registerLocalLibraryIpc() {
   if (registered) return
   registered = true
 
-  addHandler('previewPlayniteImport', (_e, args) => previewPlayniteImport(args))
-  addHandler('importPlayniteLibrary', (_e, args) => importPlayniteLibrary(args))
-  addHandler('mergePlayniteLibrary', () => mergePlayniteLibrary())
-  addHandler('previewPlayniteMerge', () => previewPlayniteMerge())
-  addHandler('exportPlayniteLibrary', (_e, targetPath) =>
-    exportPlayniteLibrary(targetPath)
-  )
+  addHandler('previewPlayniteImport', async (_e, args) => {
+    const { previewPlayniteImport } = await import('./import')
+    return previewPlayniteImport(args)
+  })
+  addHandler('importPlayniteLibrary', async (_e, args) => {
+    const { importPlayniteLibrary } = await import('./import')
+    return importPlayniteLibrary(args)
+  })
+  addHandler('mergePlayniteLibrary', async () => {
+    const { mergePlayniteLibrary } = await import('./import')
+    return mergePlayniteLibrary()
+  })
+  addHandler('previewPlayniteMerge', async () => {
+    const { previewPlayniteMerge } = await import('./import')
+    return previewPlayniteMerge()
+  })
+  addHandler('exportPlayniteLibrary', async (_e, targetPath) => {
+    const { exportPlayniteLibrary } = await import('./export')
+    return exportPlayniteLibrary(targetPath)
+  })
   addHandler('getLastPlayniteLibraryPath', () => getLastPlayniteLibraryPath())
   addHandler('getLocalGameSessions', (_e, appName) => getLocalSessions(appName))
   addHandler('getLocalGameMeta', (_e, appName) => getLocalGameMeta(appName))
@@ -120,111 +106,184 @@ export function registerLocalLibraryIpc() {
   addHandler('reorderCompletionStatuses', (_e, ids) =>
     reorderCompletionStatuses(ids)
   )
-  addHandler('openSteamClientUri', (_e, args) =>
-    openSteamClientUri(args.action, args.steamAppId)
-  )
-  addHandler('cacheSteamHero', (_e, steamAppId) => cacheSteamHero(steamAppId))
-  addHandler('getSteamAppDetails', (_e, args) => getSteamAppDetails(args))
-  addHandler('getAllCollectionArt', () => getAllCollectionArt())
-  addHandler('setCollectionGameArt', (_e, args) => setCollectionGameArt(args))
-  addHandler('searchCollectionWebImages', (_e, args) =>
-    searchCollectionWebImages(args)
-  )
-  addHandler('setCollectionGameArtFromUrl', (_e, args) =>
-    setCollectionGameArtFromUrl(args)
-  )
-  addHandler('clearCollectionGameArt', (_e, args) =>
-    clearCollectionGameArt(args)
-  )
-  addHandler('getCollectionSettings', async () => {
-    const settings = getCollectionSettings()
-    const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
-    return { ...settings, ludusaviDetected }
+  addHandler('openSteamClientUri', async (_e, args) => {
+    const { openSteamClientUri } = await import('./steam')
+    return openSteamClientUri(args.action, args.steamAppId)
   })
-  addHandler('setCollectionUiSettings', async (_e, args) => {
-    const settings = setCollectionUiSettings(args)
-    const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
-    return { ...settings, ludusaviDetected }
+  addHandler('cacheSteamHero', async (_e, steamAppId) => {
+    const { cacheSteamHero } = await import('./heroes')
+    return cacheSteamHero(steamAppId)
   })
+  addHandler('getSteamAppDetails', async (_e, args) => {
+    const { getSteamAppDetails } = await import('./steam-details')
+    return getSteamAppDetails(args)
+  })
+  addHandler('getAllCollectionArt', async () => {
+    const { getAllCollectionArt } = await import('./art')
+    return getAllCollectionArt()
+  })
+  addHandler('setCollectionGameArt', async (_e, args) => {
+    const { setCollectionGameArt } = await import('./art')
+    return setCollectionGameArt(args)
+  })
+  addHandler('searchCollectionWebImages', async (_e, args) => {
+    const { searchCollectionWebImages } = await import('./web-images')
+    return searchCollectionWebImages(args)
+  })
+  addHandler('setCollectionGameArtFromUrl', async (_e, args) => {
+    const { setCollectionGameArtFromUrl } = await import('./art')
+    return setCollectionGameArtFromUrl(args)
+  })
+  addHandler('clearCollectionGameArt', async (_e, args) => {
+    const { clearCollectionGameArt } = await import('./art')
+    return clearCollectionGameArt(args)
+  })
+  addHandler('getCollectionSettings', () => withLudusaviDetection())
+  addHandler('setCollectionUiSettings', (_e, args) =>
+    withLudusaviDetection(setCollectionUiSettings(args))
+  )
   addHandler('setCollectionScreenshotsSettings', async (_e, args) => {
     const settings = setCollectionScreenshotsSettings(args)
     configureScreenshotCaptureHotkey()
+    const { maintainScreenshotThumbnailCache } =
+      await import('./screenshots/thumbnails')
     await maintainScreenshotThumbnailCache()
-    const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
-    return { ...settings, ludusaviDetected }
+    return withLudusaviDetection(settings)
   })
-  addHandler('getCollectionScreenshotCacheInfo', () =>
-    maintainScreenshotThumbnailCache()
-  )
-  addHandler('clearCollectionScreenshotCache', () =>
-    clearScreenshotThumbnailCache()
-  )
-  addHandler('getCollectionScreenshots', (_e, args) =>
-    getCollectionScreenshots(args)
-  )
-  addHandler('deleteCollectionScreenshot', (_e, args) =>
-    deleteCollectionScreenshot(args)
-  )
+  addHandler('getCollectionScreenshotCacheInfo', async () => {
+    const { maintainScreenshotThumbnailCache } =
+      await import('./screenshots/thumbnails')
+    return maintainScreenshotThumbnailCache()
+  })
+  addHandler('clearCollectionScreenshotCache', async () => {
+    const { clearScreenshotThumbnailCache } =
+      await import('./screenshots/thumbnails')
+    return clearScreenshotThumbnailCache()
+  })
+  addHandler('getCollectionScreenshots', async (_e, args) => {
+    const { getCollectionScreenshots } = await import('./screenshots')
+    return getCollectionScreenshots(args)
+  })
+  addHandler('deleteCollectionScreenshot', async (_e, args) => {
+    const { deleteCollectionScreenshot } = await import('./screenshots')
+    return deleteCollectionScreenshot(args)
+  })
   addHandler('getCollectionScreenshotCaptureStatus', () =>
     getScreenshotCaptureStatus()
   )
   addHandler('captureCollectionScreenshot', () => captureActiveGameScreenshot())
   addHandler('setCollectionBackupSettings', async (_e, args) => {
     const settings = setCollectionBackupSettings(args)
-    const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
-    return { ...settings, ludusaviDetected }
+    return withLudusaviDetection(settings)
   })
-  addHandler('runCollectionBackup', (_e, force) =>
-    runCollectionBackup(Boolean(force))
-  )
+  addHandler('runCollectionBackup', async (_e, force) => {
+    const { runCollectionBackup } = await import('./backup')
+    return runCollectionBackup(Boolean(force))
+  })
   addHandler('setLudusaviSettings', async (_e, args) => {
     const settings = setLudusaviSettings(args)
-    const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
-    return { ...settings, ludusaviDetected }
+    return withLudusaviDetection(settings)
   })
-  addHandler('runLudusaviBackup', (_e, args) =>
-    backupLudusaviForGame({ ...args, reason: 'manual' })
-  )
+  addHandler('runLudusaviBackup', async (_e, args) => {
+    const { backupLudusaviForGame } = await import('./ludusavi')
+    return backupLudusaviForGame({ ...args, reason: 'manual' })
+  })
   addHandler('setCollectionMetadataSettings', async (_e, args) => {
     const settings = setCollectionMetadataSettings(args)
-    const ludusaviDetected = await detectLudusavi(settings.ludusavi.binaryPath)
-    return { ...settings, ludusaviDetected }
+    return withLudusaviDetection(settings)
   })
-  addHandler('testIgdbCredentials', () => testIgdbCredentials())
-  addHandler('getAllCollectionMetadata', () => getAllCollectionMetadata())
-  addHandler('getCollectionGameMetadata', (_e, args) =>
-    getCollectionGameMetadata(args.runner, args.appName)
-  )
-  addHandler('previewCollectionMetadata', (_e, args) =>
-    previewGameMetadata(args)
-  )
-  addHandler('applyCollectionMetadata', (_e, args) => applyGameMetadata(args))
-  addHandler('updateCollectionGameDetails', (_e, args) =>
-    updateCollectionGameDetails(args)
-  )
-  addHandler('searchCollectionMetadata', (_e, args) => searchGameMetadata(args))
-  addHandler('startCollectionMetadataBulk', (_e, args) =>
-    startBulkMetadata(args)
-  )
-  addHandler('getCollectionMetadataBulkStatus', () => getBulkMetadataProgress())
-  addHandler('cancelCollectionMetadataBulk', () => cancelBulkMetadata())
-  addHandler('forceClearLocalPlaying', (_e, args) =>
-    forceClearLocalPlaying(args.appName, args.runner)
-  )
-  addHandler('removeCollectionGame', (_e, args) => removeCollectionGame(args))
-  addHandler('getEmulationState', (_e, refreshDetect) =>
-    getEmulationState(refreshDetect !== false)
-  )
-  addHandler('detectCollectionEmulators', () => getEmulationState(true))
-  addHandler('addDetectedEmulators', () => addDetectedEmulators())
-  addHandler('upsertUserEmulator', (_e, args) => saveUserEmulator(args))
-  addHandler('removeUserEmulator', (_e, id) => deleteUserEmulator(id))
-  addHandler('upsertRomScanner', (_e, args) => saveRomScanner(args))
-  addHandler('removeRomScanner', (_e, id) => deleteRomScanner(id))
-  addHandler('previewRomScan', (_e, args) => scanRomsPreview(args))
-  addHandler('importRomScan', (_e, args) => importRoms(args))
-  addHandler('runRomScanners', () => autoScanRomFolders())
-  addHandler('setEmulatorLaunchRom', (_e, args) => setEmulatorLaunchRom(args))
+  addHandler('testIgdbCredentials', async () => {
+    const { testIgdbCredentials } = await import('./metadata')
+    return testIgdbCredentials()
+  })
+  addHandler('getAllCollectionMetadata', async () => {
+    const { getAllCollectionMetadata } = await import('./metadata')
+    return getAllCollectionMetadata()
+  })
+  addHandler('getCollectionGameMetadata', async (_e, args) => {
+    const { getCollectionGameMetadata } = await import('./metadata')
+    return getCollectionGameMetadata(args.runner, args.appName)
+  })
+  addHandler('previewCollectionMetadata', async (_e, args) => {
+    const { previewGameMetadata } = await import('./metadata')
+    return previewGameMetadata(args)
+  })
+  addHandler('applyCollectionMetadata', async (_e, args) => {
+    const { applyGameMetadata } = await import('./metadata')
+    return applyGameMetadata(args)
+  })
+  addHandler('updateCollectionGameDetails', async (_e, args) => {
+    const { updateCollectionGameDetails } = await import('./metadata')
+    return updateCollectionGameDetails(args)
+  })
+  addHandler('searchCollectionMetadata', async (_e, args) => {
+    const { searchGameMetadata } = await import('./metadata')
+    return searchGameMetadata(args)
+  })
+  addHandler('startCollectionMetadataBulk', async (_e, args) => {
+    const { startBulkMetadata } = await import('./metadata')
+    return startBulkMetadata(args)
+  })
+  addHandler('getCollectionMetadataBulkStatus', async () => {
+    const { getBulkMetadataProgress } = await import('./metadata')
+    return getBulkMetadataProgress()
+  })
+  addHandler('cancelCollectionMetadataBulk', async () => {
+    const { cancelBulkMetadata } = await import('./metadata')
+    return cancelBulkMetadata()
+  })
+  addHandler('forceClearLocalPlaying', async (_e, args) => {
+    const { forceClearLocalPlaying } = await import('./playtime-watch')
+    return forceClearLocalPlaying(args.appName, args.runner)
+  })
+  addHandler('removeCollectionGame', async (_e, args) => {
+    const { removeCollectionGame } = await import('./remove')
+    return removeCollectionGame(args)
+  })
+  addHandler('getEmulationState', async (_e, refreshDetect) => {
+    const { getEmulationState } = await import('./emulation')
+    return getEmulationState(refreshDetect !== false)
+  })
+  addHandler('detectCollectionEmulators', async () => {
+    const { getEmulationState } = await import('./emulation')
+    return getEmulationState(true)
+  })
+  addHandler('addDetectedEmulators', async () => {
+    const { addDetectedEmulators } = await import('./emulation')
+    return addDetectedEmulators()
+  })
+  addHandler('upsertUserEmulator', async (_e, args) => {
+    const { saveUserEmulator } = await import('./emulation')
+    return saveUserEmulator(args)
+  })
+  addHandler('removeUserEmulator', async (_e, id) => {
+    const { deleteUserEmulator } = await import('./emulation')
+    return deleteUserEmulator(id)
+  })
+  addHandler('upsertRomScanner', async (_e, args) => {
+    const { saveRomScanner } = await import('./emulation')
+    return saveRomScanner(args)
+  })
+  addHandler('removeRomScanner', async (_e, id) => {
+    const { deleteRomScanner } = await import('./emulation')
+    return deleteRomScanner(id)
+  })
+  addHandler('previewRomScan', async (_e, args) => {
+    const { scanRomsPreview } = await import('./emulation')
+    return scanRomsPreview(args)
+  })
+  addHandler('importRomScan', async (_e, args) => {
+    const { importRoms } = await import('./emulation')
+    return importRoms(args)
+  })
+  addHandler('runRomScanners', async () => {
+    const { autoScanRomFolders } = await import('./emulation')
+    return autoScanRomFolders()
+  })
+  addHandler('setEmulatorLaunchRom', async (_e, args) => {
+    const { setEmulatorLaunchRom } = await import('./emulation')
+    return setEmulatorLaunchRom(args)
+  })
 }
 
 export async function initLocalLibrary() {
@@ -238,14 +297,5 @@ export async function initLocalLibrary() {
   ensureDefaultStatuses()
   backfillMissingGameStatuses()
   await refreshLocalInstallStates()
-  void autoScanRomFolders()
-  void refreshMissingLocalCovers()
-  void warmSteamHeroes(
-    Object.values(getAllLocalGameMeta())
-      .map((meta) => meta.steamAppId)
-      .filter((id): id is string => Boolean(id))
-  )
-  void refreshMissingCollectionMetadata()
-  void maintainScreenshotThumbnailCache()
-  void maybeRunScheduledBackup()
+  scheduleIdleMaintenance()
 }

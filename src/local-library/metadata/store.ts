@@ -28,16 +28,38 @@ export function getAllGameMetadata(): Record<string, CollectionGameMetadata> {
 }
 
 export function upsertGameMetadata(metadata: CollectionGameMetadata) {
-  const games = { ...metadataFile.get('games') }
+  const games = metadataFile.get('games')
   games[metadataKey(metadata.runner, metadata.appName)] = metadata
   metadataFile.set('games', games)
   return metadata
 }
 
 export function deleteGameMetadata(runner: string, appName: string) {
-  const games = { ...metadataFile.get('games') }
+  const games = metadataFile.get('games')
   delete games[metadataKey(runner, appName)]
   metadataFile.set('games', games)
+}
+
+export function listGameMetadata(): Record<string, CollectionGameMetadata> {
+  const games = metadataFile.get('games')
+  const slim: Record<string, CollectionGameMetadata> = {}
+  for (const [key, metadata] of Object.entries(games)) {
+    if (
+      !metadata.description &&
+      !metadata.notes &&
+      !metadata.websites?.length
+    ) {
+      slim[key] = metadata
+      continue
+    }
+    slim[key] = {
+      ...metadata,
+      description: undefined,
+      notes: undefined,
+      websites: []
+    }
+  }
+  return slim
 }
 
 export function currentOrBlank(

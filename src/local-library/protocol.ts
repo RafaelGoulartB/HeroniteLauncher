@@ -3,7 +3,6 @@ import { join, resolve, sep } from 'path'
 import { pathToFileURL } from 'url'
 import { app, net, protocol } from 'electron'
 import { getCollectionSettings } from './settings'
-import { getScreenshotThumbnail } from './screenshots/thumbnails'
 
 const SCHEME = 'localart'
 const IMAGE_EXT = new Set([
@@ -130,14 +129,18 @@ export function initLocalArtProtocol() {
       parsed.hostname === 'screenshots' &&
       parsed.searchParams.get('preview') === '1'
     ) {
-      const thumbnail = await getScreenshotThumbnail(filePath)
-      if (!thumbnail) {
+      const { getScreenshotThumbnailPath } =
+        await import('./screenshots/thumbnails')
+      const thumbnailPath = await getScreenshotThumbnailPath(filePath)
+      if (!thumbnailPath) {
         return new Response('Preview unavailable', { status: 415 })
       }
-      return new Response(new Uint8Array(thumbnail), {
+      const preview = await net.fetch(pathToFileURL(thumbnailPath).href)
+      return new Response(preview.body, {
+        status: preview.status,
         headers: {
           'Content-Type': 'image/jpeg',
-          'Cache-Control': 'no-store'
+          'Cache-Control': 'public, max-age=86400'
         }
       })
     }

@@ -1,4 +1,5 @@
 import {
+  memo,
   useContext,
   useEffect,
   useMemo,
@@ -50,14 +51,18 @@ import PlayIcon from 'frontend/assets/play-icon.svg?react'
 import StopIconAlt from 'frontend/assets/stop-icon-alt.svg?react'
 import DownIcon from 'frontend/assets/down-icon.svg?react'
 import { getCardStatus } from 'frontend/screens/Library/components/GameCard/constants'
-import fallBackImage from 'frontend/assets/heroic_card.jpg'
-import { formatPlaytimeMinutes } from './playtime'
+import {
+  formatPlaytimeMinutes,
+  onPlaytimeChanged,
+  setPlaytimeMinutes
+} from './playtime'
 import { STATUS_COLORS } from './statusColors'
 import CollectionContextMenu from './CollectionContextMenu'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
+import CollectionPlaytimeDialog from './CollectionPlaytimeDialog'
 import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
-import { collectionCoverSrc } from './steamArt'
+import { collectionCoverSources } from './steamArt'
 import { collectionGameTitle } from './collectionTitle'
 import PickRomDialog from './PickRomDialog'
 import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
@@ -79,7 +84,7 @@ type Props = {
   onRemoved?: () => void
 }
 
-export default function CollectionCard({
+function CollectionCardActive({
   gameInfo: gameInfoFromProps,
   meta,
   collectionArt,
@@ -110,9 +115,9 @@ export default function CollectionCard({
     )
 
   const [gameInfo, setGameInfo] = useState<GameInfo>(gameInfoFromProps)
-  const [visible, setVisible] = useState(false)
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
+  const [playtimeOpen, setPlaytimeOpen] = useState(false)
   const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const {
@@ -122,7 +127,7 @@ export default function CollectionCard({
     install: gameInstallInfo
   } = { ...gameInfoFromProps }
   const title = collectionGameTitle(gameInfoFromProps, metadata)
-  const cover = collectionCoverSrc(
+  const cover = collectionCoverSources(
     gameInfoFromProps,
     collectionArt,
     meta?.steamAppId,
@@ -158,16 +163,6 @@ export default function CollectionCard({
   const [liveExtraMinutes, setLiveExtraMinutes] = useState(0)
 
   useEffect(() => {
-    const callback = (e: CustomEvent<{ appNames: string[] }>) => {
-      if (e.detail.appNames.includes(appName)) {
-        setVisible(true)
-      }
-    }
-    window.addEventListener('visible-cards', callback)
-    return () => window.removeEventListener('visible-cards', callback)
-  }, [appName])
-
-  useEffect(() => {
     const updateInfo = async () => {
       const newInfo = await getGameInfo(appName, runner)
       if (newInfo) setGameInfo(newInfo)
@@ -175,6 +170,15 @@ export default function CollectionCard({
     void updateInfo()
     setPlayedMinutes(timestampStore.get_nodefault(appName)?.totalPlayed)
   }, [status, appName, runner, isTrackingTime])
+
+  useEffect(
+    () =>
+      onPlaytimeChanged((changed) => {
+        if (changed !== appName) return
+        setPlayedMinutes(timestampStore.get_nodefault(appName)?.totalPlayed)
+      }),
+    [appName]
+  )
 
   useEffect(() => {
     if (!isTrackingTime) {
@@ -551,16 +555,6 @@ export default function CollectionCard({
     return null
   }
 
-  if (!visible && !isTrackingTime && !isFocused) {
-    return (
-      <div
-        className="collectionCard"
-        data-app-name={appName}
-        data-invisible="true"
-      />
-    )
-  }
-
   return (
     <>
       {showUninstallModal && (
@@ -579,6 +573,17 @@ export default function CollectionCard({
           metadata={metadata}
           onChange={onMetadataChange}
           onClose={() => setMetadataOpen(false)}
+        />
+      )}
+      {playtimeOpen && (
+        <CollectionPlaytimeDialog
+          title={title}
+          minutes={playedMinutes ?? 0}
+          onClose={() => setPlaytimeOpen(false)}
+          onSave={(minutes) => {
+            setPlaytimeMinutes(appName, minutes)
+            setPlaytimeOpen(false)
+          }}
         />
       )}
       {pickRomOpen && meta?.roms && (
@@ -671,6 +676,12 @@ export default function CollectionCard({
             icon: <TravelExplore />
           },
           {
+            label: t('collection.playtime.edit', 'Edit playtime'),
+            onclick: () => setPlaytimeOpen(true),
+            show: !isTrackingTime,
+            icon: <AccessTime />
+          },
+          {
             label: t('submenu.logs', 'Logs'),
             onclick: () => openGameLogsModal(gameInfo),
             show: isInstalled && !isUninstalling && !isBrowserGame,
@@ -746,6 +757,7 @@ export default function CollectionCard({
             'is-playing': isTrackingTime,
             'is-focused': isFocused
           })}
+          data-app-name={appName}
         >
           <div className="collectionCard__cover">
             <button
@@ -759,9 +771,9 @@ export default function CollectionCard({
               }
             >
               <CachedImage
-                key={cover}
-                src={cover}
-                fallback={fallBackImage}
+                key={cover.src}
+                src={cover.src}
+                fallback={cover.fallback}
                 className={classNames('collectionCard__image', {
                   installed: isInstalled
                 })}
@@ -802,3 +814,34 @@ export default function CollectionCard({
     </>
   )
 }
+
+function CollectionCard(props: Props) {
+  const appName = props.gameInfo.app_name
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const callback = (event: CustomEvent<{ appNames: string[] }>) => {
+      if (event.detail.appNames.includes(appName)) setVisible(true)
+    }
+    window.addEventListener('visible-cards', callback)
+    return () => window.removeEventListener('visible-cards', callback)
+  }, [appName])
+
+  useEffect(() => {
+    if (props.isFocused) setVisible(true)
+  }, [props.isFocused])
+
+  if (!visible && !props.isFocused) {
+    return (
+      <div
+        className="collectionCard"
+        data-app-name={appName}
+        data-invisible="true"
+      />
+    )
+  }
+
+  return <CollectionCardActive {...props} />
+}
+
+export default memo(CollectionCard)

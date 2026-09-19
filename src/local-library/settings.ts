@@ -1,5 +1,6 @@
 import Store from 'electron-store'
 import type {
+  CollectionBackgroundSettings,
   CollectionBackupInterval,
   CollectionBackupSettings,
   CollectionMetadataSettings,
@@ -12,6 +13,7 @@ import type {
   MetadataSourceId
 } from 'common/types/local-library'
 import {
+  DEFAULT_COLLECTION_BACKGROUND,
   DEFAULT_FIELD_PRIORITY,
   METADATA_FIELDS
 } from 'common/types/local-library'
@@ -24,8 +26,19 @@ type SettingsFile = {
   backup: CollectionBackupSettings
   ludusavi: LudusaviSettings
   greyUninstalledGames: boolean
+  background: CollectionBackgroundSettings
   screenshots: CollectionScreenshotsSettings
   metadata: CollectionMetadataSettings
+}
+
+const BACKGROUND_RANGES: Record<
+  keyof Omit<CollectionBackgroundSettings, 'enabled'>,
+  { min: number; max: number }
+> = {
+  blur: { min: 0, max: 40 },
+  dimming: { min: 0, max: 90 },
+  saturation: { min: 0, max: 150 },
+  scrim: { min: 0, max: 150 }
 }
 
 const SOURCE_IDS: MetadataSourceId[] = [
@@ -70,6 +83,26 @@ function fallbackMetadata(): CollectionMetadataSettings {
   }
 }
 
+function normalizeBackground(
+  value?: Partial<CollectionBackgroundSettings>
+): CollectionBackgroundSettings {
+  const clamp = (
+    key: keyof typeof BACKGROUND_RANGES,
+    raw: number | undefined
+  ) => {
+    const { min, max } = BACKGROUND_RANGES[key]
+    if (!Number.isFinite(raw)) return DEFAULT_COLLECTION_BACKGROUND[key]
+    return Math.min(max, Math.max(min, Math.round(raw as number)))
+  }
+  return {
+    enabled: value?.enabled !== false,
+    blur: clamp('blur', value?.blur),
+    dimming: clamp('dimming', value?.dimming),
+    saturation: clamp('saturation', value?.saturation),
+    scrim: clamp('scrim', value?.scrim)
+  }
+}
+
 function normalizeMetadata(
   value?: Partial<CollectionMetadataSettings>
 ): CollectionMetadataSettings {
@@ -108,6 +141,7 @@ const settingsFile = new Store<SettingsFile>({
       compression: 'deflate'
     },
     greyUninstalledGames: true,
+    background: { ...DEFAULT_COLLECTION_BACKGROUND },
     screenshots: {
       folder: '',
       cacheLimitMb: DEFAULT_SCREENSHOT_CACHE_LIMIT_MB,
@@ -193,31 +227,37 @@ export function getCollectionSettings(): CollectionSettings {
       lastError: ludusavi.lastError
     },
     greyUninstalledGames: settingsFile.get('greyUninstalledGames') !== false,
-    screenshots: {
-      folder:
-        (
-          settingsFile.get('screenshots') ?? fallbackScreenshots()
-        ).folder?.trim() ?? '',
-      cacheLimitMb: asScreenshotCacheLimit(
-        (settingsFile.get('screenshots') ?? fallbackScreenshots()).cacheLimitMb
-      ),
-      captureEnabled: Boolean(
-        (settingsFile.get('screenshots') ?? fallbackScreenshots())
-          .captureEnabled
-      ),
-      captureAccelerator:
-        (
-          settingsFile.get('screenshots') ?? fallbackScreenshots()
-        ).captureAccelerator?.trim() || 'F10'
-    },
+    background: normalizeBackground(settingsFile.get('background')),
+    screenshots: (() => {
+      const screenshots =
+        settingsFile.get('screenshots') ?? fallbackScreenshots()
+      return {
+        folder: screenshots.folder?.trim() ?? '',
+        cacheLimitMb: asScreenshotCacheLimit(screenshots.cacheLimitMb),
+        captureEnabled: Boolean(screenshots.captureEnabled),
+        captureAccelerator: screenshots.captureAccelerator?.trim() || 'F10'
+      }
+    })(),
     metadata: normalizeMetadata(settingsFile.get('metadata'))
   }
 }
 
 export function setCollectionUiSettings(args: {
-  greyUninstalledGames: boolean
+  greyUninstalledGames?: boolean
+  background?: Partial<CollectionBackgroundSettings>
 }): CollectionSettings {
-  settingsFile.set('greyUninstalledGames', args.greyUninstalledGames)
+  if (typeof args.greyUninstalledGames === 'boolean') {
+    settingsFile.set('greyUninstalledGames', args.greyUninstalledGames)
+  }
+  if (args.background) {
+    settingsFile.set(
+      'background',
+      normalizeBackground({
+        ...normalizeBackground(settingsFile.get('background')),
+        ...args.background
+      })
+    )
+  }
   return getCollectionSettings()
 }
 

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useContext,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -17,8 +18,10 @@ import {
   CloudDownload,
   SportsEsports
 } from '@mui/icons-material'
+import type { CSSProperties } from 'react'
 import type { GameInfo } from 'common/types'
 import type {
+  CollectionBackgroundSettings,
   CollectionGameArt,
   CollectionGameMetadata,
   CollectionMetadataBulkProgress,
@@ -26,6 +29,7 @@ import type {
   CoverAspectPreset,
   LocalGameMeta
 } from 'common/types/local-library'
+import { DEFAULT_COLLECTION_BACKGROUND } from 'common/types/local-library'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { CachedImage } from 'frontend/components/UI'
 import { configStore, timestampStore } from 'frontend/helpers/electronStores'
@@ -56,6 +60,7 @@ import {
 } from './steamArt'
 import { collectionGameTitle } from './collectionTitle'
 import { collectTagOptions } from './collectionTags'
+import { getPlaytimeMinutes, onPlaytimeChanged } from './playtime'
 import './index.css'
 
 const INSTALL_FILTER_KEY = 'collection_install_filter'
@@ -167,10 +172,6 @@ function gameKey(game: GameInfo) {
   return `${game.runner}_${game.app_name}`
 }
 
-function playtimeMinutes(appName: string): number {
-  return timestampStore.get_nodefault(appName)?.totalPlayed ?? 0
-}
-
 function lastPlayedAt(appName: string): string {
   return timestampStore.get_nodefault(appName)?.lastPlayed ?? ''
 }
@@ -211,6 +212,7 @@ export default function Collection() {
     hiddenGames
   } = useContext(ContextProvider)
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [installFilter, setInstallFilter] =
     useState<InstallFilter>(readInstallFilter)
   const [facetFilters, setFacetFilters] =
@@ -224,6 +226,9 @@ export default function Collection() {
   const [stuckGroups, setStuckGroups] = useState<Set<string>>(() => new Set())
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [greyUninstalledGames, setGreyUninstalledGames] = useState(true)
+  const [background, setBackground] = useState<CollectionBackgroundSettings>(
+    DEFAULT_COLLECTION_BACKGROUND
+  )
   const [screenshotsFolder, setScreenshotsFolder] = useState('')
   const [sidebarHidden, setSidebarHidden] = useState(readSidebarHidden)
   const [focusedKey, setFocusedKey] = useState<string | null>(readFocusedKey)
@@ -248,6 +253,7 @@ export default function Collection() {
   const [recentAppNames, setRecentAppNames] = useState<Set<string>>(
     () => new Set()
   )
+  const [playtimes, setPlaytimes] = useState<Record<string, number>>({})
   const listRef = useRef<HTMLDivElement | null>(null)
 
   const handleSearch = useCallback((text: string) => {
@@ -301,6 +307,7 @@ export default function Collection() {
     setCollectionArt(nextArt)
     setCollectionMetadata(nextMetadata)
     setGreyUninstalledGames(nextSettings.greyUninstalledGames !== false)
+    setBackground(nextSettings.background ?? DEFAULT_COLLECTION_BACKGROUND)
     setScreenshotsFolder(nextSettings.screenshots?.folder ?? '')
     setCoverAspect(nextSettings.metadata?.coverAspect || 'steam')
   }
@@ -389,8 +396,21 @@ export default function Collection() {
     hiddenGames.list
   ])
 
+  useEffect(() => {
+    const refresh = () => {
+      const next: Record<string, number> = {}
+      for (const game of games) {
+        const minutes = getPlaytimeMinutes(game.app_name)
+        if (minutes) next[game.app_name] = minutes
+      }
+      setPlaytimes(next)
+    }
+    refresh()
+    return onPlaytimeChanged(refresh)
+  }, [games])
+
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase()
+    const query = deferredSearch.trim().toLowerCase()
     const next = games.filter((game) => {
       const title = collectionGameTitle(
         game,
@@ -408,7 +428,8 @@ export default function Collection() {
 
     return next.sort((a, b) => {
       if (sort === 'playtime') {
-        const delta = playtimeMinutes(b.app_name) - playtimeMinutes(a.app_name)
+        const delta =
+          (playtimes[b.app_name] ?? 0) - (playtimes[a.app_name] ?? 0)
         if (delta) return delta
       }
       if (sort === 'lastPlayed') {
@@ -431,7 +452,15 @@ export default function Collection() {
         )
       )
     })
-  }, [games, search, installFilter, sort, collectionMetadata, facetFilters])
+  }, [
+    games,
+    deferredSearch,
+    installFilter,
+    sort,
+    collectionMetadata,
+    facetFilters,
+    playtimes
+  ])
 
   const facetOptions = useMemo(
     () =>
@@ -544,16 +573,7 @@ export default function Collection() {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [
-    filtered,
-    groupByStatus,
-    statuses,
-    metas,
-    sort,
-    focusedKey,
-    collapsedGroups,
-    facetFilters
-  ])
+  }, [filtered, groupByStatus, statuses, collapsedGroups])
 
   useEffect(() => {
     if (!groupByStatus) {
@@ -615,6 +635,13 @@ export default function Collection() {
     }
   }
 
+  const backgroundStyle = {
+    '--collection-bg-blur': `${background.blur}px`,
+    '--collection-bg-dim': background.dimming / 100,
+    '--collection-bg-saturate': background.saturation / 100,
+    '--collection-bg-scrim': background.scrim / 100
+  } as CSSProperties
+
   function renderCards(list: GameInfo[]) {
     return list.map((game) => (
       <CollectionCard
@@ -661,8 +688,9 @@ export default function Collection() {
         'collection--greyUninstalled': greyUninstalledGames
       })}
       data-cover-aspect={coverAspect}
+      style={backgroundStyle}
     >
-      {paintedArt && (
+      {background.enabled && paintedArt && (
         <div className="collection__stage" aria-hidden>
           <CachedImage
             key={paintedArt.src}
@@ -861,6 +889,15 @@ export default function Collection() {
                 ]
               : undefined
           }
+          games={games}
+          collectionMetadata={collectionMetadata}
+          collectionArtMap={collectionArt}
+          metas={metas}
+          onSelectGame={(next) => {
+            const key = gameKey(next)
+            persistFocusedKey(key)
+            setFocusedKey(key)
+          }}
           onMetadataChange={(next) => {
             if (!paintedGame) return
             setCollectionMetadata((current) => ({
@@ -905,9 +942,12 @@ export default function Collection() {
           onClose={() => setSettingsOpen(false)}
           onSettingsChange={(next) => {
             setGreyUninstalledGames(next.greyUninstalledGames !== false)
+            setBackground(next.background ?? DEFAULT_COLLECTION_BACKGROUND)
             setCoverAspect(next.metadata?.coverAspect || 'steam')
             setScreenshotsFolder(next.screenshots?.folder ?? '')
           }}
+          onBackgroundPreview={setBackground}
+          previewArt={paintedArt?.src}
           onOpenMetadataWizard={() => {
             setSettingsOpen(false)
             setBulkDismissed(false)
