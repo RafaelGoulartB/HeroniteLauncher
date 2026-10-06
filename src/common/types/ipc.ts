@@ -95,6 +95,7 @@ import type {
   CollectionMetadataSettings,
   IgdbCredentialTest,
   EmulationState,
+  EmulatorSaveStateList,
   RomScanImportArgs,
   RomScanImportResult,
   RomScanPreview,
@@ -431,6 +432,15 @@ interface AsyncIPCFunctions {
     appName: string
     romPath: string
   }) => Promise<LocalGameMeta | undefined>
+  getEmulatorSaveStates: (args: {
+    appName: string
+    romPath?: string
+  }) => Promise<EmulatorSaveStateList>
+  setEmulatorLaunchState: (args: {
+    appName: string
+    romPath?: string
+    statePath?: string
+  }) => Promise<boolean>
   launch: (args: LaunchParams) => StatusPromise
   openDialog: (args: OpenDialogOptions) => Promise<string | false>
   install: (args: InstallParams) => Promise<void>

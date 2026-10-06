@@ -61,5 +61,7 @@ export const localLibrary = {
   previewRomScan: makeHandlerInvoker('previewRomScan'),
   importRomScan: makeHandlerInvoker('importRomScan'),
   runRomScanners: makeHandlerInvoker('runRomScanners'),
-  setEmulatorLaunchRom: makeHandlerInvoker('setEmulatorLaunchRom')
+  setEmulatorLaunchRom: makeHandlerInvoker('setEmulatorLaunchRom'),
+  getEmulatorSaveStates: makeHandlerInvoker('getEmulatorSaveStates'),
+  setEmulatorLaunchState: makeHandlerInvoker('setEmulatorLaunchState')
 }

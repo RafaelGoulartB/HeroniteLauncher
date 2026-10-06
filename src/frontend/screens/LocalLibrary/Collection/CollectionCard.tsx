@@ -64,8 +64,7 @@ import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
 import { collectionCoverSources } from './steamArt'
 import { collectionGameTitle } from './collectionTitle'
-import PickRomDialog from './PickRomDialog'
-import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
+import { useEmulatorLaunchFlow } from './useEmulatorLaunchFlow'
 import './CollectionCard.css'
 
 const storage: Storage = window.localStorage
@@ -118,7 +117,6 @@ function CollectionCardActive({
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
   const [playtimeOpen, setPlaytimeOpen] = useState(false)
-  const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const {
     app_name: appName,
@@ -434,6 +432,25 @@ function CollectionCardActive({
     })
   }
 
+  async function launchGame() {
+    const isOffline = connectivity.status !== 'online'
+    await launch({
+      appName,
+      t,
+      runner,
+      hasUpdate,
+      showDialogModal,
+      notPlayableOffline: isOffline && !gameInfo.canRunOffline
+    })
+  }
+
+  const emulatorLaunch = useEmulatorLaunchFlow({
+    appName,
+    title,
+    meta,
+    launchGame
+  })
+
   async function handlePlay(playRunner: Runner) {
     if (!isInstalled && !isQueued && gameInfo.runner !== 'sideload') {
       return install({
@@ -468,19 +485,8 @@ function CollectionCardActive({
     }
 
     if (isInstalled) {
-      if (emulatorNeedsRomPick(meta)) {
-        setPickRomOpen(true)
-        return
-      }
-      const isOffline = connectivity.status !== 'online'
-      await launch({
-        appName,
-        t,
-        runner: playRunner,
-        hasUpdate,
-        showDialogModal,
-        notPlayableOffline: isOffline && !gameInfo.canRunOffline
-      })
+      if (emulatorLaunch.start()) return
+      await launchGame()
     }
   }
 
@@ -586,29 +592,7 @@ function CollectionCardActive({
           }}
         />
       )}
-      {pickRomOpen && meta?.roms && (
-        <PickRomDialog
-          title={title}
-          roms={meta.roms}
-          selectedPath={meta.selectedRomPath}
-          onClose={() => setPickRomOpen(false)}
-          onPlay={(romPath) => {
-            setPickRomOpen(false)
-            void (async () => {
-              await prepareEmulatorLaunch(appName, romPath)
-              const isOffline = connectivity.status !== 'online'
-              await launch({
-                appName,
-                t,
-                runner,
-                hasUpdate,
-                showDialogModal,
-                notPlayableOffline: isOffline && !gameInfo.canRunOffline
-              })
-            })()
-          }}
-        />
-      )}
+      {emulatorLaunch.dialogs}
       <CollectionContextMenu
         statuses={statuses.map((item) => ({
           id: item.id,

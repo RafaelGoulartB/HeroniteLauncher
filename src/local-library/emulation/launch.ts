@@ -31,7 +31,7 @@ export function emulatorRomInstalled(meta: LocalGameMeta): boolean {
   return meta.roms.some((rom) => pathExists(rom.path))
 }
 
-function pickRomPath(
+export function pickRomPath(
   meta: LocalGameMeta,
   extraArgs: string[]
 ): string | undefined {
@@ -117,11 +117,21 @@ export async function tryLaunchEmulatedGame(
     }
   }
 
+  const { rememberSaveStateKey, takePendingLaunchState } =
+    await import('./save-states')
+  const launchState = takePendingLaunchState(gameInfo.app_name, romPath)
+
   const useWine =
     emulator?.launchKind === 'wine' || executable.toLowerCase().endsWith('.exe')
   if (useWine) {
     await applySideloadLaunch(gameInfo, executable, argv.join(' '))
     return null
+  }
+  if (launchState) {
+    const rest = launchState.replacesImage
+      ? argv.filter((part) => part !== romPath)
+      : argv
+    argv = [...launchState.args, ...rest]
   }
 
   const { callRunner } = await import('backend/launcher')
@@ -151,6 +161,7 @@ export async function tryLaunchEmulatedGame(
       ? dirname(romPath)
       : emulator?.installDir || dir
 
+  const startedAt = Date.now()
   const result = await callRunner(
     commandParts,
     {
@@ -165,6 +176,10 @@ export async function tryLaunchEmulatedGame(
       logWriters: [logWriter],
       logMessagePrefix: LogPrefix.Sideload
     }
+  )
+
+  void rememberSaveStateKey(gameInfo.app_name, romPath, startedAt).catch(
+    () => undefined
   )
 
   if (result.error) return false

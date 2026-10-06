@@ -181,6 +181,24 @@ export interface UpsertUserEmulatorArgs {
   profiles?: UserEmulatorProfile[]
 }
 
+export type EmulatorSaveStateKind = 'slot' | 'resume'
+
+export interface EmulatorSaveState {
+  path: string
+  kind: EmulatorSaveStateKind
+  slot?: number
+  modifiedAt: string
+  /** Small JPEG/PNG data URL when the emulator stores a screenshot. */
+  thumbnail?: string
+}
+
+export interface EmulatorSaveStateList {
+  supported: boolean
+  emulatorName?: string
+  romPath?: string
+  states: EmulatorSaveState[]
+}
+
 export interface UpsertRomScannerArgs {
   id?: string
   name?: string
@@ -212,6 +230,8 @@ export interface LocalGameMeta {
   emulatorProfileId?: string
   platformId?: string
   selectedRomPath?: string
+  /** Save-state key (serial / game ID) per ROM path, learned after a session. */
+  saveStateKeys?: Record<string, string>
   notes?: string
   completionStatusId?: string
   playniteCompletionStatusId?: string

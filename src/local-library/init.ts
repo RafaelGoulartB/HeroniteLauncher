@@ -284,6 +284,14 @@ export function registerLocalLibraryIpc() {
     const { setEmulatorLaunchRom } = await import('./emulation')
     return setEmulatorLaunchRom(args)
   })
+  addHandler('getEmulatorSaveStates', async (_e, args) => {
+    const { listEmulatorSaveStates } = await import('./emulation/save-states')
+    return listEmulatorSaveStates(args)
+  })
+  addHandler('setEmulatorLaunchState', async (_e, args) => {
+    const { setPendingLaunchState } = await import('./emulation/save-states')
+    return setPendingLaunchState(args)
+  })
 }
 
 export async function initLocalLibrary() {

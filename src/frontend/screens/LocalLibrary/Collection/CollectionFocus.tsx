@@ -54,8 +54,7 @@ import CollectionHowLongToBeat from './CollectionHowLongToBeat'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
 import CollectionRelatedGames from './CollectionRelatedGames'
 import CollectionScreenshots from './CollectionScreenshots'
-import PickRomDialog from './PickRomDialog'
-import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
+import { useEmulatorLaunchFlow } from './useEmulatorLaunchFlow'
 import { collectionGameTitle } from './collectionTitle'
 import {
   EMPTY_FACET_FILTERS,
@@ -302,7 +301,6 @@ function CollectionFocusPanel({
   } = useContext(ContextProvider)
   const [artOpen, setArtOpen] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
-  const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const [gameInfo, setGameInfo] = useState<GameInfo>(game)
   const [extraInfo, setExtraInfo] = useState<ExtraInfo | null>(
@@ -557,6 +555,25 @@ function CollectionFocusPanel({
     openInstallGameModal({ appName, runner, gameInfo })
   }
 
+  async function launchGame() {
+    const isOffline = connectivity.status !== 'online'
+    await launch({
+      appName,
+      t: tGame,
+      runner,
+      hasUpdate,
+      showDialogModal,
+      notPlayableOffline: isOffline && !gameInfo.canRunOffline
+    })
+  }
+
+  const emulatorLaunch = useEmulatorLaunchFlow({
+    appName,
+    title,
+    meta,
+    launchGame
+  })
+
   async function handlePlay() {
     if (!isInstalled && !isQueued && gameInfo.runner !== 'sideload') {
       return install({
@@ -587,19 +604,8 @@ function CollectionFocusPanel({
       return window.api.removeFromDMQueue(appName)
     }
     if (isInstalled) {
-      if (emulatorNeedsRomPick(meta)) {
-        setPickRomOpen(true)
-        return
-      }
-      const isOffline = connectivity.status !== 'online'
-      await launch({
-        appName,
-        t: tGame,
-        runner,
-        hasUpdate,
-        showDialogModal,
-        notPlayableOffline: isOffline && !gameInfo.canRunOffline
-      })
+      if (emulatorLaunch.start()) return
+      await launchGame()
     }
   }
 
@@ -943,29 +949,7 @@ function CollectionFocusPanel({
           onClose={() => setMetadataOpen(false)}
         />
       )}
-      {pickRomOpen && meta?.roms && (
-        <PickRomDialog
-          title={title}
-          roms={meta.roms}
-          selectedPath={meta.selectedRomPath}
-          onClose={() => setPickRomOpen(false)}
-          onPlay={(romPath) => {
-            setPickRomOpen(false)
-            void (async () => {
-              await prepareEmulatorLaunch(appName, romPath)
-              const isOffline = connectivity.status !== 'online'
-              await launch({
-                appName,
-                t: tGame,
-                runner,
-                hasUpdate,
-                showDialogModal,
-                notPlayableOffline: isOffline && !gameInfo.canRunOffline
-              })
-            })()
-          }}
-        />
-      )}
+      {emulatorLaunch.dialogs}
     </aside>
   )
 }
