@@ -102,7 +102,9 @@ import type {
   RomScanner,
   UpsertRomScannerArgs,
   UpsertUserEmulatorArgs,
-  UserEmulator
+  UserEmulator,
+  LocalLaunchInfo,
+  LocalLaunchOptionsPatch
 } from './local-library'
 
 // ts-prune-ignore-next
@@ -396,6 +398,12 @@ interface AsyncIPCFunctions {
   updateCollectionGameDetails: (
     args: CollectionGameDetailsPatch
   ) => Promise<CollectionGameDetailsResult>
+  getLocalLaunchInfo: (args: {
+    appName: string
+  }) => Promise<LocalLaunchInfo | null>
+  setLocalLaunchOptions: (
+    args: LocalLaunchOptionsPatch
+  ) => Promise<LocalLaunchInfo | null>
   searchCollectionMetadata: (args: {
     title: string
   }) => Promise<CollectionMetadataSearchHit[]>

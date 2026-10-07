@@ -337,6 +337,10 @@ export async function tryLaunchLocalGame(
   const emulated = await tryLaunchEmulatedGame(gameInfo, logWriter, extraArgs)
   if (emulated !== null) return emulated
 
+  const { tryLaunchNativeLocalGame } = await import('./native-launch')
+  const native = await tryLaunchNativeLocalGame(gameInfo, logWriter, extraArgs)
+  if (native !== null) return native
+
   const meta = getLocalGameMeta(gameInfo.app_name)
   if (!meta || meta.launchKind !== 'steam-uri' || !meta.steamAppId) {
     return null

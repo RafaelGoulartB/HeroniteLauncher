@@ -367,7 +367,8 @@
             "scoreInvalid": "Score must be a number, or empty.",
             "tab": {
                 "details": "Details",
-                "images": "Images"
+                "images": "Images",
+                "launch": "Launch"
             },
             "tabsLabel": "Game settings tabs",
             "tagHelp": "Pick existing tags or type a new one and press Enter to create it.",
@@ -377,6 +378,27 @@
         },
         "group": "Group by status",
         "hideSidebar": "Hide sidebar",
+        "launch": {
+            "browse": "Browse",
+            "current": "Current",
+            "detectedLabel": "Detected",
+            "effective": {
+                "linux": "Runs natively on Linux",
+                "windows": "Runs through Wine/Proton"
+            },
+            "executable": "Executable",
+            "help": "Linux programs (ELF binaries, shell scripts, AppImages) run directly; Windows programs run through Wine/Proton. Automatic decides from the file.",
+            "missing": "(file not found)",
+            "runAs": {
+                "auto": "Automatic (from the file)",
+                "linux": "Linux native",
+                "windows": "Windows (Wine/Proton)"
+            },
+            "runAsLabel": "Run as",
+            "saved": "Saved",
+            "selectExecutable": "Select executable",
+            "unavailable": "This game is started by an emulator, Steam or its store, not by an executable."
+        },
         "metadata": {
             "apply": "Apply",
             "applying": "Saving…",
@@ -479,6 +501,7 @@
             "minutes": "Minutes",
             "save": "Save"
         },
+        "refreshAll": "Refresh all libraries",
         "settings": {
             "backgroundBlur": "Blur",
             "backgroundDimming": "Darkening",

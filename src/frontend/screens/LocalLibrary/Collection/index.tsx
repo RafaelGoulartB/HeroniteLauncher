@@ -16,6 +16,7 @@ import {
   MenuOpen,
   Settings,
   CloudDownload,
+  Refresh,
   SportsEsports
 } from '@mui/icons-material'
 import type { CSSProperties } from 'react'
@@ -209,8 +210,11 @@ export default function Collection() {
     zoom,
     sideloadedLibrary,
     allTilesInColor,
-    hiddenGames
+    hiddenGames,
+    refreshLibrary,
+    refreshing
   } = useContext(ContextProvider)
+  const [refreshingAll, setRefreshingAll] = useState(false)
   const [search, setSearch] = useState('')
   const deferredSearch = useDeferredValue(search)
   const [installFilter, setInstallFilter] =
@@ -315,6 +319,20 @@ export default function Collection() {
   useEffect(() => {
     void reload()
   }, [sideloadedLibrary])
+
+  // Saved ROM folders first (they add new Local games), then every store
+  // library and the Local install state (Steam, emulator ROMs, executables).
+  async function handleRefreshAll() {
+    if (refreshingAll) return
+    setRefreshingAll(true)
+    try {
+      await window.api.localLibrary.runRomScanners().catch(() => 0)
+      await refreshLibrary({ checkForUpdates: true, runInBackground: true })
+      await reload()
+    } finally {
+      setRefreshingAll(false)
+    }
+  }
 
   useEffect(() => {
     void window.api.localLibrary.getMetadataBulkStatus().then((next) => {
@@ -777,6 +795,18 @@ export default function Collection() {
               <span>{bulkProgress.percent}%</span>
             </button>
           )}
+          <button
+            type="button"
+            className={classNames('collection__toolBtn', {
+              'is-spinning': refreshingAll || refreshing
+            })}
+            title={t('collection.refreshAll', 'Refresh all libraries')}
+            aria-label={t('collection.refreshAll', 'Refresh all libraries')}
+            disabled={refreshingAll}
+            onClick={() => void handleRefreshAll()}
+          >
+            <Refresh />
+          </button>
           <PlayniteMenu onLibraryChanged={() => void reload()} />
           <button
             type="button"

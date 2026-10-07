@@ -4,6 +4,28 @@ export type LocalLaunchKind =
   | 'emulator'
   | 'unavailable'
 
+/** How a Local executable runs: detected from the file, or forced by the user. */
+export type LocalRunAs = 'auto' | 'linux' | 'windows'
+
+/** What the executable file is: ELF / `#!` script / AppImage, or a Windows binary. */
+export type LocalExecutableKind = 'linux' | 'windows' | 'unknown'
+
+export interface LocalLaunchInfo {
+  appName: string
+  executable: string
+  exists: boolean
+  detected: LocalExecutableKind
+  runAs: LocalRunAs
+  /** The platform the next launch uses. */
+  effective: 'linux' | 'windows'
+}
+
+export interface LocalLaunchOptionsPatch {
+  appName: string
+  executable?: string
+  runAs?: LocalRunAs
+}
+
 export type LocalGameSource =
   | 'steam'
   | 'epic'
@@ -232,6 +254,8 @@ export interface LocalGameMeta {
   selectedRomPath?: string
   /** Save-state key (serial / game ID) per ROM path, learned after a session. */
   saveStateKeys?: Record<string, string>
+  /** Executable games: run natively or through Wine/Proton (default auto). */
+  runAs?: LocalRunAs
   notes?: string
   completionStatusId?: string
   playniteCompletionStatusId?: string

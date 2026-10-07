@@ -20,6 +20,7 @@ import {
 import CollectionWebImageDialog from './CollectionWebImageDialog'
 import CollectionScreenshotArtDialog from './CollectionScreenshotArtDialog'
 import CollectionTagField from './CollectionTagField'
+import CollectionLaunchTab from './CollectionLaunchTab'
 import { EMPTY_TAG_OPTIONS, type CollectionTagKind } from './collectionTags'
 import './CollectionGameArtDialog.css'
 
@@ -40,7 +41,7 @@ type Props = {
   onClose: () => void
 }
 
-type ConfigTab = 'images' | 'details'
+type ConfigTab = 'images' | 'details' | 'launch'
 
 type DetailsForm = {
   title: string
@@ -177,6 +178,10 @@ export default function CollectionGameArtDialog({
   const heroSrc = art?.heroUrl || defaultHero
   const runner: Runner = game.runner
   const dirty = !sameForm(form, initialForm)
+  const showLaunchTab =
+    game.runner === 'sideload' &&
+    meta?.launchKind !== 'emulator' &&
+    meta?.launchKind !== 'steam-uri'
 
   function handleTabChange(_event: SyntheticEvent, next: ConfigTab) {
     setActiveTab(next)
@@ -336,6 +341,12 @@ export default function CollectionGameArtDialog({
               label={t('collection.gameConfig.tab.details', 'Details')}
               value="details"
             />
+            {showLaunchTab && (
+              <Tab
+                label={t('collection.gameConfig.tab.launch', 'Launch')}
+                value="launch"
+              />
+            )}
           </Tabs>
 
           <TabPanel value={activeTab} index="images">
@@ -593,6 +604,12 @@ export default function CollectionGameArtDialog({
               </label>
             </div>
           </TabPanel>
+
+          {showLaunchTab && (
+            <TabPanel value={activeTab} index="launch">
+              <CollectionLaunchTab game={game} />
+            </TabPanel>
+          )}
 
           {error && <p className="CollectionGameArtDialog__error">{error}</p>}
         </DialogContent>

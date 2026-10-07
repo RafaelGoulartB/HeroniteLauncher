@@ -36,8 +36,9 @@ type HowLongToBeatFindResponse = {
 
 type HowLongToBeatSearchToken = {
   token: string
-  hpKey: string
-  hpVal: string
+  // Older site builds also required a honeypot key/value pair.
+  hpKey?: string
+  hpVal?: string
   fetchedAt: number
 }
 
@@ -272,7 +273,7 @@ async function fetchSearchToken(force = false) {
   const token = data?.token
   const hpKey = data?.hpKey
   const hpVal = data?.hpVal
-  if (response.status !== 200 || !token || !hpKey || !hpVal) {
+  if (response.status !== 200 || !token) {
     logInfo(
       `HowLongToBeat search init failed (${response.status})`,
       LogPrefix.ExtraGameInfo
@@ -330,7 +331,7 @@ async function searchHowLongToBeatByTitle(
         randomizer: 0
       },
       useCache: true,
-      [auth.hpKey]: auth.hpVal
+      ...(auth.hpKey && auth.hpVal ? { [auth.hpKey]: auth.hpVal } : {})
     }
 
     const response = await axios.post<HowLongToBeatFindResponse>(
@@ -344,8 +345,9 @@ async function searchHowLongToBeatByTitle(
           Origin: HLTB_BASE_URL,
           Referer: `${HLTB_BASE_URL}/`,
           'x-auth-token': auth.token,
-          'x-hp-key': auth.hpKey,
-          'x-hp-val': auth.hpVal
+          ...(auth.hpKey && auth.hpVal
+            ? { 'x-hp-key': auth.hpKey, 'x-hp-val': auth.hpVal }
+            : {})
         },
         timeout: 10000,
         validateStatus: (status) => status < 500

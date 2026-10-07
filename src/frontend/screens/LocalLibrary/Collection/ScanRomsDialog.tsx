@@ -16,6 +16,7 @@ import { MenuItem } from '@mui/material'
 import ContextProvider from 'frontend/state/ContextProvider'
 import type {
   EmulationState,
+  RomScanner,
   RomScanPreview,
   UserEmulator,
   UserEmulatorProfile
@@ -62,12 +63,34 @@ export default function ScanRomsDialog({
   const [customExe, setCustomExe] = useState('')
   const [customExt, setCustomExt] = useState('iso,cue,chd,zip')
   const [customArgs, setCustomArgs] = useState('{ImagePath}')
+  // Each emulator profile keeps one fixed ROM folder: the saved scanner.
+  const [scannerId, setScannerId] = useState<string | undefined>()
 
   const emulator = state.emulators.find((item) => item.id === emulatorId)
   const profiles = emulator?.profiles ?? []
   const profile: UserEmulatorProfile | undefined =
     profiles.find((item) => item.id === profileId) ?? profiles[0]
   const selectedCount = preview?.games.filter((item) => item.import).length ?? 0
+
+  function selectTarget(
+    nextEmulatorId: string,
+    nextProfileId: string,
+    scanners: RomScanner[] = state.scanners,
+    keepDirectory?: string
+  ) {
+    setEmulatorId(nextEmulatorId)
+    setProfileId(nextProfileId)
+    setPreview(null)
+    const saved = scanners.find(
+      (item) =>
+        item.emulatorId === nextEmulatorId && item.profileId === nextProfileId
+    )
+    setScannerId(saved?.id)
+    setDirectory(keepDirectory || saved?.directory || '')
+    setScanSubfolders(saved?.scanSubfolders ?? true)
+    setMergeRelatedFiles(saved?.mergeRelatedFiles ?? true)
+    setAutoScanOnRefresh(saved?.autoScanOnRefresh ?? true)
+  }
 
   async function reload(refreshDetect = false) {
     const next = await window.api.localLibrary.getEmulationState(refreshDetect)
@@ -81,12 +104,14 @@ export default function ScanRomsDialog({
         ? next.emulators.find((item) => item.id === initialEmulatorId)
         : next.emulators[0]
       if (first) {
-        setEmulatorId(first.id)
-        setProfileId(
+        selectTarget(
+          first.id,
           initialProfileId &&
             first.profiles.some((item) => item.id === initialProfileId)
             ? initialProfileId
-            : (first.profiles[0]?.id ?? '')
+            : (first.profiles[0]?.id ?? ''),
+          next.scanners,
+          initialDirectory
         )
       }
     })
@@ -99,8 +124,7 @@ export default function ScanRomsDialog({
       const added = await window.api.localLibrary.addDetectedEmulators()
       const next = await reload(true)
       if (!emulatorId && added[0]) {
-        setEmulatorId(added[0].id)
-        setProfileId(added[0].profiles[0]?.id ?? '')
+        selectTarget(added[0].id, added[0].profiles[0]?.id ?? '', next.scanners)
       }
       if (!next.emulators.length) {
         setError(
@@ -145,9 +169,8 @@ export default function ScanRomsDialog({
             }
           ]
         })
-      await reload()
-      setEmulatorId(created.id)
-      setProfileId(created.profiles[0]?.id ?? '')
+      const next = await reload()
+      selectTarget(created.id, created.profiles[0]?.id ?? '', next.scanners)
       setCustomOpen(false)
     } catch (err) {
       setError(String(err))
@@ -210,6 +233,7 @@ export default function ScanRomsDialog({
         emulatorId,
         profileId: profile.id,
         directory,
+        scannerId,
         scanSubfolders,
         mergeRelatedFiles,
         autoScanOnRefresh,
@@ -260,10 +284,8 @@ export default function ScanRomsDialog({
             disabled={!state.emulators.length}
             onChange={(event) => {
               const id = event.target.value
-              setEmulatorId(id)
               const next = state.emulators.find((item) => item.id === id)
-              setProfileId(next?.profiles[0]?.id ?? '')
-              setPreview(null)
+              selectTarget(id, next?.profiles[0]?.id ?? '')
             }}
           >
             {!state.emulators.length && (
@@ -350,10 +372,7 @@ export default function ScanRomsDialog({
           label={t('collection.emulation.profile', 'Platform / profile')}
           value={profile?.id ?? ''}
           disabled={!profiles.length}
-          onChange={(event) => {
-            setProfileId(event.target.value)
-            setPreview(null)
-          }}
+          onChange={(event) => selectTarget(emulatorId, event.target.value)}
         >
           {profiles.map((item) => (
             <MenuItem key={item.id} value={item.id}>

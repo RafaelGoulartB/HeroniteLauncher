@@ -562,3 +562,17 @@
 .collection__iconBtn svg {
   font-size: 1.15rem;
 }
+
+.collection__toolBtn.is-spinning svg {
+  animation: collectionRefreshSpin 1s linear infinite;
+}
+
+.collection__toolBtn:disabled {
+  cursor: progress;
+}
+
+@keyframes collectionRefreshSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

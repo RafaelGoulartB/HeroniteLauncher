@@ -216,6 +216,14 @@ export function registerLocalLibraryIpc() {
     const { updateCollectionGameDetails } = await import('./metadata')
     return updateCollectionGameDetails(args)
   })
+  addHandler('getLocalLaunchInfo', async (_e, { appName }) => {
+    const { getLocalLaunchInfo } = await import('./native-launch')
+    return getLocalLaunchInfo(appName)
+  })
+  addHandler('setLocalLaunchOptions', async (_e, args) => {
+    const { setLocalLaunchOptions } = await import('./native-launch')
+    return setLocalLaunchOptions(args)
+  })
   addHandler('searchCollectionMetadata', async (_e, args) => {
     const { searchGameMetadata } = await import('./metadata')
     return searchGameMetadata(args)

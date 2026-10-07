@@ -1,0 +1,51 @@
+.CollectionLaunchTab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.CollectionLaunchTab__help,
+.CollectionLaunchTab__status {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.CollectionLaunchTab__status strong {
+  color: var(--text-default);
+}
+
+.CollectionLaunchTab__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.CollectionLaunchTab__path {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.CollectionLaunchTab__path input {
+  flex: 1;
+  font-family: monospace;
+}
+
+.CollectionLaunchTab__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.CollectionLaunchTab__saved {
+  color: var(--success, var(--text-secondary));
+}
+
+.CollectionLaunchTab__warn,
+.CollectionLaunchTab__error {
+  color: var(--danger, #e57373);
+}
+
+.CollectionLaunchTab__error {
+  margin: 0;
+}

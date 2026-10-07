@@ -44,6 +44,8 @@ export const localLibrary = {
   previewMetadata: makeHandlerInvoker('previewCollectionMetadata'),
   applyMetadata: makeHandlerInvoker('applyCollectionMetadata'),
   updateGameDetails: makeHandlerInvoker('updateCollectionGameDetails'),
+  getLaunchInfo: makeHandlerInvoker('getLocalLaunchInfo'),
+  setLaunchOptions: makeHandlerInvoker('setLocalLaunchOptions'),
   searchMetadata: makeHandlerInvoker('searchCollectionMetadata'),
   startMetadataBulk: makeHandlerInvoker('startCollectionMetadataBulk'),
   getMetadataBulkStatus: makeHandlerInvoker('getCollectionMetadataBulkStatus'),

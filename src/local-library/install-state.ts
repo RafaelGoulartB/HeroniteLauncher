@@ -22,6 +22,7 @@ import {
   emulatorExecutablePath,
   emulatorRomInstalled
 } from './emulation/launch'
+import { syncLocalExecutablePlatform } from './native-launch'
 
 function firstExistingPath(...paths: Array<string | undefined>): string {
   for (const path of paths) {
@@ -84,8 +85,10 @@ export function applySideloadAppToLocalMeta(game: GameInfo): void {
     selectedRomPath: existing?.selectedRomPath,
     notes: existing?.notes,
     completionStatusId: existing?.completionStatusId,
-    playniteCompletionStatusId: existing?.playniteCompletionStatusId
+    playniteCompletionStatusId: existing?.playniteCompletionStatusId,
+    runAs: existing?.runAs
   })
+  syncLocalExecutablePlatform(game)
 }
 
 function syncMetaExecutable(meta: LocalGameMeta, executable: string): void {
