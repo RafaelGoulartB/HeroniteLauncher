@@ -439,6 +439,8 @@ export async function importPlayniteLibrary(
   }
 
   sendFrontendMessage('refreshLibrary', 'sideload')
+  const { clearPlayniteDumpCache } = await import('./metadata/sources')
+  clearPlayniteDumpCache()
   return result
 }
 

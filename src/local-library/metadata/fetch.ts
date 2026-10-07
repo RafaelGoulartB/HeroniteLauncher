@@ -25,8 +25,8 @@ import {
 } from './sources'
 import {
   currentOrBlank,
-  getAllGameMetadata,
   getGameMetadata,
+  listGameMetadata,
   upsertGameMetadata
 } from './store'
 import { PlayniteGame } from '../playnite/reader'
@@ -161,7 +161,7 @@ export function getCollectionGameMetadata(
 }
 
 export function getAllCollectionMetadata() {
-  return getAllGameMetadata()
+  return listGameMetadata()
 }
 
 export async function previewGameMetadata(

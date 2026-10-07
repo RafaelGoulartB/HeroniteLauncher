@@ -1,0 +1,39 @@
+.CollectionPlaytime .MuiPaper-root {
+  min-width: min(420px, 92vw);
+}
+
+.CollectionPlaytime__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.CollectionPlaytime__fields {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.CollectionPlaytime__fields label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  flex: 1;
+}
+
+.CollectionPlaytime__fields span {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.CollectionPlaytime__fields input {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--space-3xs);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--input-background, rgba(0, 0, 0, 0.25));
+  color: var(--text-default);
+}
+
+.CollectionPlaytime__preview {
+  font-size: var(--text-lg);
+  font-weight: var(--bold);
+}

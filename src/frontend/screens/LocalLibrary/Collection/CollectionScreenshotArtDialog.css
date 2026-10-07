@@ -1,0 +1,73 @@
+.CollectionScreenshotArtDialog {
+  width: min(960px, 96vw);
+  max-width: min(960px, 96vw) !important;
+  min-width: min(720px, 92vw);
+}
+
+.CollectionScreenshotArtDialog__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 74vh;
+}
+
+.CollectionScreenshotArtDialog__help {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.CollectionScreenshotArtDialog__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
+  gap: 0.6rem;
+  min-height: 18rem;
+  max-height: 46vh;
+  overflow: auto;
+  padding: 0.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.CollectionScreenshotArtDialog__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  grid-column: 1 / -1;
+  min-height: 18rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.CollectionScreenshotArtDialog__item {
+  position: relative;
+  display: block;
+  margin: 0;
+  padding: 0;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.CollectionScreenshotArtDialog__item:hover,
+.CollectionScreenshotArtDialog__item.is-selected {
+  border-color: var(--accent);
+}
+
+.CollectionScreenshotArtDialog__item .collectionScreenshotPreview {
+  position: absolute;
+  inset: 0;
+}
+
+.CollectionScreenshotArtDialog__more {
+  align-self: center;
+  min-width: 12rem;
+}
+
+.CollectionScreenshotArtDialog__error {
+  margin: 0;
+  color: var(--danger, #e74c3c);
+}

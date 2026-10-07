@@ -4,6 +4,28 @@ export type LocalLaunchKind =
   | 'emulator'
   | 'unavailable'
 
+/** How a Local executable runs: detected from the file, or forced by the user. */
+export type LocalRunAs = 'auto' | 'linux' | 'windows'
+
+/** What the executable file is: ELF / `#!` script / AppImage, or a Windows binary. */
+export type LocalExecutableKind = 'linux' | 'windows' | 'unknown'
+
+export interface LocalLaunchInfo {
+  appName: string
+  executable: string
+  exists: boolean
+  detected: LocalExecutableKind
+  runAs: LocalRunAs
+  /** The platform the next launch uses. */
+  effective: 'linux' | 'windows'
+}
+
+export interface LocalLaunchOptionsPatch {
+  appName: string
+  executable?: string
+  runAs?: LocalRunAs
+}
+
 export type LocalGameSource =
   | 'steam'
   | 'epic'
@@ -181,6 +203,24 @@ export interface UpsertUserEmulatorArgs {
   profiles?: UserEmulatorProfile[]
 }
 
+export type EmulatorSaveStateKind = 'slot' | 'resume'
+
+export interface EmulatorSaveState {
+  path: string
+  kind: EmulatorSaveStateKind
+  slot?: number
+  modifiedAt: string
+  /** Small JPEG/PNG data URL when the emulator stores a screenshot. */
+  thumbnail?: string
+}
+
+export interface EmulatorSaveStateList {
+  supported: boolean
+  emulatorName?: string
+  romPath?: string
+  states: EmulatorSaveState[]
+}
+
 export interface UpsertRomScannerArgs {
   id?: string
   name?: string
@@ -212,6 +252,10 @@ export interface LocalGameMeta {
   emulatorProfileId?: string
   platformId?: string
   selectedRomPath?: string
+  /** Save-state key (serial / game ID) per ROM path, learned after a session. */
+  saveStateKeys?: Record<string, string>
+  /** Executable games: run natively or through Wine/Proton (default auto). */
+  runAs?: LocalRunAs
   notes?: string
   completionStatusId?: string
   playniteCompletionStatusId?: string
@@ -661,11 +705,32 @@ export interface CollectionScreenshotCacheInfo {
   limitBytes: number
 }
 
+export interface CollectionBackgroundSettings {
+  enabled: boolean
+  /** Backdrop blur applied over the artwork, in pixels. */
+  blur: number
+  /** Dark tint over the artwork, 0-90%. */
+  dimming: number
+  /** Artwork saturation, 0-150%. */
+  saturation: number
+  /** Strength of the side/top/bottom gradients that protect the text, 0-150%. */
+  scrim: number
+}
+
+export const DEFAULT_COLLECTION_BACKGROUND: CollectionBackgroundSettings = {
+  enabled: true,
+  blur: 6,
+  dimming: 14,
+  saturation: 94,
+  scrim: 100
+}
+
 export interface CollectionSettings {
   backup: CollectionBackupSettings
   ludusavi: LudusaviSettings
   ludusaviDetected?: LudusaviDetectedConfig
   greyUninstalledGames: boolean
+  background: CollectionBackgroundSettings
   screenshots: CollectionScreenshotsSettings
   metadata: CollectionMetadataSettings
 }

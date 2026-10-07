@@ -44,6 +44,8 @@ export const localLibrary = {
   previewMetadata: makeHandlerInvoker('previewCollectionMetadata'),
   applyMetadata: makeHandlerInvoker('applyCollectionMetadata'),
   updateGameDetails: makeHandlerInvoker('updateCollectionGameDetails'),
+  getLaunchInfo: makeHandlerInvoker('getLocalLaunchInfo'),
+  setLaunchOptions: makeHandlerInvoker('setLocalLaunchOptions'),
   searchMetadata: makeHandlerInvoker('searchCollectionMetadata'),
   startMetadataBulk: makeHandlerInvoker('startCollectionMetadataBulk'),
   getMetadataBulkStatus: makeHandlerInvoker('getCollectionMetadataBulkStatus'),
@@ -61,5 +63,7 @@ export const localLibrary = {
   previewRomScan: makeHandlerInvoker('previewRomScan'),
   importRomScan: makeHandlerInvoker('importRomScan'),
   runRomScanners: makeHandlerInvoker('runRomScanners'),
-  setEmulatorLaunchRom: makeHandlerInvoker('setEmulatorLaunchRom')
+  setEmulatorLaunchRom: makeHandlerInvoker('setEmulatorLaunchRom'),
+  getEmulatorSaveStates: makeHandlerInvoker('getEmulatorSaveStates'),
+  setEmulatorLaunchState: makeHandlerInvoker('setEmulatorLaunchState')
 }

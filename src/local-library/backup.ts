@@ -36,7 +36,10 @@ const SKIP_NAMES = new Set([
   'SingletonLock',
   'SingletonCookie',
   'SingletonSocket',
-  'lockfile'
+  'lockfile',
+  'screenshot-thumbnails',
+  'steam-details',
+  'logs'
 ])
 
 let backupRunning = false

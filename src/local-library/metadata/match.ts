@@ -1,5 +1,10 @@
 import { normalizeTitle } from '../playnite/mapper'
 
+// Providers index the base game, never the demo or the beta build, so a title
+// ending in one of those markers finds nothing until the marker is dropped.
+const RELEASE_MARKER =
+  /\s*[-–:]?\s*[([]?\s*\b(?:(?:multiplayer|open|closed|public|free)\s+)?(?:demo|beta|alpha|playtest|trial|preview|early\s+access)\b\s*[)\]]?\s*$/i
+
 export function titleQueries(title: string): string[] {
   const cleaned = title.replaceAll('_', ' ').replace(/\s+/g, ' ').trim()
   const noEdition = cleaned.replace(
@@ -7,7 +12,8 @@ export function titleQueries(title: string): string[] {
     ''
   )
   const colon = cleaned.replace(/\s+-\s+/g, ': ')
-  return [...new Set([cleaned, noEdition, colon])].filter(
+  const noMarker = noEdition.replace(RELEASE_MARKER, '').trim()
+  return [...new Set([cleaned, noEdition, colon, noMarker])].filter(
     (query) => query.length >= 2
   )
 }

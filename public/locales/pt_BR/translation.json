@@ -204,6 +204,27 @@
         "unsync": "Dessincronizar",
         "continue": "Continuar"
     },
+    "collection": {
+        "focus": {
+            "related": "Jogos relacionados",
+            "sameDeveloper": "Mesmo desenvolvedor",
+            "sameSeries": "Mesma série"
+        },
+        "gameArt": {
+            "screenshot": "Screenshot",
+            "fromScreenshot": {
+                "empty": "Nenhuma screenshot encontrada para este jogo.",
+                "failed": "Não foi possível usar esta screenshot.",
+                "help": "Escolha uma screenshot deste jogo para usar de fundo.",
+                "loading": "Carregando…",
+                "loadFailed": "Não foi possível carregar as screenshots.",
+                "more": "Carregar mais",
+                "noFolder": "Defina uma pasta de screenshots nas configurações da Collection primeiro.",
+                "select": "Selecionar",
+                "title": "Selecionar screenshot"
+            }
+        }
+    },
     "controller": {
         "hints": {
             "back": "Voltar",

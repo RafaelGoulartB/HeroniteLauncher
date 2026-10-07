@@ -1,4 +1,7 @@
-import { existsSync, mkdirSync, writeFileSync } from 'graceful-fs'
+import { createWriteStream } from 'fs'
+import { mkdir } from 'fs/promises'
+import { pipeline } from 'stream/promises'
+import { existsSync, unlinkSync } from 'graceful-fs'
 import { join } from 'path'
 import { app } from 'electron'
 import axios, { isAxiosError } from 'axios'
@@ -33,17 +36,28 @@ function heroCandidateUrls(steamAppId: string) {
 
 async function downloadHero(url: string, dest: string): Promise<boolean> {
   try {
-    const response = await axios.get<ArrayBuffer>(url, {
-      responseType: 'arraybuffer',
+    const response = await axios.get(url, {
+      responseType: 'stream',
       timeout: 25000,
       validateStatus: (status) => status === 200
     })
-    const bytes = Buffer.from(response.data)
     const type = String(response.headers['content-type'] ?? '')
-    if (!type.includes('image') || bytes.length < 8000) return false
-    writeFileSync(dest, bytes)
+    const length = Number(response.headers['content-length'] ?? 0)
+    if (!type.includes('image') || (length > 0 && length < 8000)) {
+      response.data.destroy()
+      return false
+    }
+    await pipeline(response.data, createWriteStream(dest))
+    if (!existsSync(dest)) return false
     return true
   } catch (error) {
+    if (existsSync(dest)) {
+      try {
+        unlinkSync(dest)
+      } catch {
+        // Ignore a partial download that could not be removed.
+      }
+    }
     const status = isAxiosError(error) ? error.response?.status : undefined
     if (status !== 404) {
       logWarning(
@@ -74,7 +88,7 @@ export async function cacheSteamHero(
   if (inflight) return inflight
 
   const task = (async () => {
-    mkdirSync(heroesDir(), { recursive: true })
+    await mkdir(heroesDir(), { recursive: true })
     for (const url of heroCandidateUrls(steamAppId)) {
       if (await downloadHero(url, dest)) {
         missing.delete(steamAppId)

@@ -44,6 +44,12 @@ let playniteDumpCache:
   | { path: string; dump: PlayniteLibraryDump; at: number }
   | undefined
 
+const PLAYNITE_DUMP_TTL_MS = 10_000
+
+export function clearPlayniteDumpCache() {
+  playniteDumpCache = undefined
+}
+
 export function steamCdnCover(steamAppId?: string) {
   return steamAppId ? steamLibraryCover(steamAppId) : undefined
 }
@@ -217,7 +223,7 @@ export function getCachedPlayniteDump(): PlayniteLibraryDump | undefined {
   if (
     playniteDumpCache &&
     playniteDumpCache.path === libraryPath &&
-    Date.now() - playniteDumpCache.at < 60_000
+    Date.now() - playniteDumpCache.at < PLAYNITE_DUMP_TTL_MS
   ) {
     return playniteDumpCache.dump
   }

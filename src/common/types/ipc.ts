@@ -72,6 +72,7 @@ import type {
   CollectionGameArt,
   CollectionWebImage,
   CollectionWebImageSearchArgs,
+  CollectionBackgroundSettings,
   CollectionBackupInterval,
   CollectionBackupResult,
   CollectionSettings,
@@ -94,13 +95,16 @@ import type {
   CollectionMetadataSettings,
   IgdbCredentialTest,
   EmulationState,
+  EmulatorSaveStateList,
   RomScanImportArgs,
   RomScanImportResult,
   RomScanPreview,
   RomScanner,
   UpsertRomScannerArgs,
   UpsertUserEmulatorArgs,
-  UserEmulator
+  UserEmulator,
+  LocalLaunchInfo,
+  LocalLaunchOptionsPatch
 } from './local-library'
 
 // ts-prune-ignore-next
@@ -328,7 +332,8 @@ interface AsyncIPCFunctions {
   }) => Promise<CollectionGameArt>
   getCollectionSettings: () => Promise<CollectionSettings>
   setCollectionUiSettings: (args: {
-    greyUninstalledGames: boolean
+    greyUninstalledGames?: boolean
+    background?: Partial<CollectionBackgroundSettings>
   }) => Promise<CollectionSettings>
   setCollectionScreenshotsSettings: (args: {
     folder: string
@@ -393,6 +398,12 @@ interface AsyncIPCFunctions {
   updateCollectionGameDetails: (
     args: CollectionGameDetailsPatch
   ) => Promise<CollectionGameDetailsResult>
+  getLocalLaunchInfo: (args: {
+    appName: string
+  }) => Promise<LocalLaunchInfo | null>
+  setLocalLaunchOptions: (
+    args: LocalLaunchOptionsPatch
+  ) => Promise<LocalLaunchInfo | null>
   searchCollectionMetadata: (args: {
     title: string
   }) => Promise<CollectionMetadataSearchHit[]>
@@ -429,6 +440,15 @@ interface AsyncIPCFunctions {
     appName: string
     romPath: string
   }) => Promise<LocalGameMeta | undefined>
+  getEmulatorSaveStates: (args: {
+    appName: string
+    romPath?: string
+  }) => Promise<EmulatorSaveStateList>
+  setEmulatorLaunchState: (args: {
+    appName: string
+    romPath?: string
+    statePath?: string
+  }) => Promise<boolean>
   launch: (args: LaunchParams) => StatusPromise
   openDialog: (args: OpenDialogOptions) => Promise<string | false>
   install: (args: InstallParams) => Promise<void>

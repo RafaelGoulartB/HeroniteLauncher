@@ -133,6 +133,9 @@
             "title": "Collection metadata"
         },
         "notPlayed": "Not Played",
+        "playtime": {
+            "edit": "Edit playtime"
+        },
         "remove": {
             "confirm": "Remove {{title}} from Collection? This does not uninstall the game. Playtime, status, and Collection images for it are deleted.",
             "failed": "Could not remove this game from Collection.",

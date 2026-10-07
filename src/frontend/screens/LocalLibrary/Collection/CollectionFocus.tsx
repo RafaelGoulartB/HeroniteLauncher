@@ -37,18 +37,24 @@ import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import { hasStatus } from 'frontend/hooks/hasStatus'
 import { getCardStatus } from 'frontend/screens/Library/components/GameCard/constants'
-import fallBackImage from 'frontend/assets/heroic_card.jpg'
-import { formatPlaytimeMinutes } from './playtime'
+import { formatPlaytimeMinutes, onPlaytimeChanged } from './playtime'
 import { STATUS_COLORS } from './statusColors'
 import { confirmForceStopPlaying } from './forceStopPlaying'
 import { openSteamStoreUri, steamAppIdFromMeta } from './steamActions'
-import { collectionCoverSrc, collectionStageArt } from './steamArt'
+import {
+  collectionArtKey,
+  collectionCoverSources,
+  collectionCoverSrc,
+  collectionMetadataKey,
+  collectionStageArt
+} from './steamArt'
 import { sanitizeSteamDescription } from './steamHtml'
 import CollectionGameArtDialog from './CollectionGameArtDialog'
+import CollectionHowLongToBeat from './CollectionHowLongToBeat'
 import CollectionMetadataDialog from './CollectionMetadataDialog'
+import CollectionRelatedGames from './CollectionRelatedGames'
 import CollectionScreenshots from './CollectionScreenshots'
-import PickRomDialog from './PickRomDialog'
-import { emulatorNeedsRomPick, prepareEmulatorLaunch } from './emulatorLaunch'
+import { useEmulatorLaunchFlow } from './useEmulatorLaunchFlow'
 import { collectionGameTitle } from './collectionTitle'
 import {
   EMPTY_FACET_FILTERS,
@@ -56,6 +62,7 @@ import {
   type CollectionFacetFilters,
   type CollectionFacetKind
 } from './collectionFacets'
+import { collectRelatedGames } from './relatedGames'
 import { EMPTY_TAG_OPTIONS, type CollectionTagKind } from './collectionTags'
 import './CollectionFocus.css'
 
@@ -77,12 +84,17 @@ type Props = {
   collectionArt?: CollectionGameArt
   metadata?: CollectionGameMetadata
   cachedHeroUrl?: string
+  games?: GameInfo[]
+  collectionMetadata?: Record<string, CollectionGameMetadata>
+  collectionArtMap?: Record<string, CollectionGameArt>
+  metas?: Record<string, LocalGameMeta>
   facetFilters?: CollectionFacetFilters
   onFacetFilter?: (kind: CollectionFacetKind, value: string) => void
   tagOptions?: Record<CollectionTagKind, string[]>
   onArtChange: (art: CollectionGameArt) => void
   onMetadataChange: (metadata: CollectionGameMetadata) => void
   onMetaChange?: (meta: LocalGameMeta) => void
+  onSelectGame?: (game: GameInfo) => void
   onClose: () => void
   screenshotsFolder?: string
 }
@@ -156,14 +168,6 @@ function toPlainText(value?: string) {
     .trim()
 }
 
-function formatHours(value?: number) {
-  if (!value) return ''
-  const hours = Math.floor(value)
-  const mins = Math.round((value - hours) * 60)
-  if (!mins) return `${hours}h`
-  return `${hours}h ${mins}m`
-}
-
 function formatTimestamp(value?: string) {
   if (!value) return ''
   if (/^\d{4}$/.test(value)) return value
@@ -195,12 +199,17 @@ export default function CollectionFocus({
   collectionArt,
   metadata,
   cachedHeroUrl,
+  games,
+  collectionMetadata,
+  collectionArtMap,
+  metas,
   facetFilters,
   onFacetFilter,
   tagOptions,
   onArtChange,
   onMetadataChange,
   onMetaChange,
+  onSelectGame,
   onClose,
   screenshotsFolder
 }: Props) {
@@ -222,12 +231,17 @@ export default function CollectionFocus({
       collectionArt={collectionArt}
       metadata={metadata}
       cachedHeroUrl={cachedHeroUrl}
+      games={games}
+      collectionMetadata={collectionMetadata}
+      collectionArtMap={collectionArtMap}
+      metas={metas}
       facetFilters={facetFilters}
       onFacetFilter={onFacetFilter}
       tagOptions={tagOptions}
       onArtChange={onArtChange}
       onMetadataChange={onMetadataChange}
       onMetaChange={onMetaChange}
+      onSelectGame={onSelectGame}
       onClose={onClose}
       screenshotsFolder={screenshotsFolder}
     />
@@ -239,14 +253,19 @@ function CollectionFocusPanel({
   meta,
   statuses,
   collectionArt,
-  metadata,
+  metadata: metadataFromList,
   cachedHeroUrl,
+  games = [],
+  collectionMetadata = {},
+  collectionArtMap = {},
+  metas = {},
   facetFilters = EMPTY_FACET_FILTERS,
   onFacetFilter,
   tagOptions = EMPTY_TAG_OPTIONS,
   onArtChange,
   onMetadataChange,
   onMetaChange,
+  onSelectGame,
   onClose,
   screenshotsFolder
 }: {
@@ -256,12 +275,17 @@ function CollectionFocusPanel({
   collectionArt?: CollectionGameArt
   metadata?: CollectionGameMetadata
   cachedHeroUrl?: string
+  games?: GameInfo[]
+  collectionMetadata?: Record<string, CollectionGameMetadata>
+  collectionArtMap?: Record<string, CollectionGameArt>
+  metas?: Record<string, LocalGameMeta>
   facetFilters?: CollectionFacetFilters
   onFacetFilter?: (kind: CollectionFacetKind, value: string) => void
   tagOptions?: Record<CollectionTagKind, string[]>
   onArtChange: (art: CollectionGameArt) => void
   onMetadataChange: (metadata: CollectionGameMetadata) => void
   onMetaChange?: (meta: LocalGameMeta) => void
+  onSelectGame?: (game: GameInfo) => void
   onClose: () => void
   screenshotsFolder?: string
 }) {
@@ -277,7 +301,6 @@ function CollectionFocusPanel({
   } = useContext(ContextProvider)
   const [artOpen, setArtOpen] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
-  const [pickRomOpen, setPickRomOpen] = useState(false)
 
   const [gameInfo, setGameInfo] = useState<GameInfo>(game)
   const [extraInfo, setExtraInfo] = useState<ExtraInfo | null>(
@@ -290,11 +313,31 @@ function CollectionFocusPanel({
   const [playedMinutes, setPlayedMinutes] = useState(
     () => timestampStore.get_nodefault(game.app_name)?.totalPlayed ?? 0
   )
+  const [detailMetadata, setDetailMetadata] = useState(metadataFromList)
 
   const { app_name: appName, runner } = game
+  const metadata = detailMetadata ?? metadataFromList
   const title = collectionGameTitle(gameInfo, metadata)
   const steamAppId = steamAppIdFromMeta(meta)
   const storeAppId = meta?.steamAppId
+
+  useEffect(() => {
+    setDetailMetadata(metadataFromList)
+    if (metadataFromList?.description || metadataFromList?.notes) return
+    let cancelled = false
+    const loadFull = async () => {
+      if (typeof window.api.localLibrary.getGameMetadata !== 'function') return
+      const full = await window.api.localLibrary.getGameMetadata({
+        runner,
+        appName
+      })
+      if (!cancelled && full) setDetailMetadata(full)
+    }
+    void loadFull()
+    return () => {
+      cancelled = true
+    }
+  }, [appName, runner, metadataFromList])
 
   useEffect(() => {
     setGameInfo(game)
@@ -311,6 +354,7 @@ function CollectionFocusPanel({
           ? Promise.resolve(null)
           : window.api.getExtraInfo(appName, runner)
       const steamPromise =
+        !metadataFromList &&
         storeAppId &&
         typeof window.api.localLibrary.getSteamDetails === 'function'
           ? window.api.localLibrary.getSteamDetails({
@@ -318,11 +362,12 @@ function CollectionFocusPanel({
               language
             })
           : Promise.resolve(null)
+      const wikiTitle = collectionGameTitle(game, metadataFromList)
       const [fresh, extra, wiki, nextAchievements, steam] =
         await Promise.allSettled([
           getGameInfo(appName, runner),
           extraPromise,
-          window.api.getWikiGameInfo(title, appName, runner),
+          window.api.getWikiGameInfo(wikiTitle, appName, runner),
           window.api.getAchievements(appName, runner),
           steamPromise
         ])
@@ -341,7 +386,7 @@ function CollectionFocusPanel({
     return () => {
       cancelled = true
     }
-  }, [appName, runner, title, game, storeAppId, language])
+  }, [appName, runner, game, storeAppId, language, metadataFromList])
 
   const { status, folder } = hasStatus(gameInfo)
   const [progress, previousProgress] = hasProgress(appName, runner)
@@ -370,17 +415,27 @@ function CollectionFocusPanel({
     setPlayedMinutes(timestampStore.get_nodefault(appName)?.totalPlayed ?? 0)
   }, [status, appName, isTrackingTime])
 
+  useEffect(
+    () =>
+      onPlaytimeChanged((changed) => {
+        if (changed !== appName) return
+        setPlayedMinutes(
+          timestampStore.get_nodefault(appName)?.totalPlayed ?? 0
+        )
+      }),
+    [appName]
+  )
+
   const completion =
     statuses.find((item) => item.id === (meta?.completionStatusId ?? '')) ??
     statuses.find((item) => item.slug === 'not-played')
 
-  const cover =
-    collectionCoverSrc(
-      gameInfo,
-      collectionArt,
-      storeAppId,
-      metadata?.coverUrl
-    ) || fallBackImage
+  const cover = collectionCoverSources(
+    gameInfo,
+    collectionArt,
+    storeAppId,
+    metadata?.coverUrl
+  )
   const defaultCover = collectionCoverSrc(gameInfo, undefined, storeAppId)
   const defaultHero = collectionStageArt(gameInfo, meta, cachedHeroUrl)?.src
   const useSteamHtml =
@@ -453,6 +508,29 @@ function CollectionFocusPanel({
     const locked = achievements.filter((item) => !item.date_unlocked)
     return [...unlocked, ...locked].slice(0, 8)
   }, [achievements])
+  const relatedGroups = useMemo(
+    () =>
+      collectRelatedGames({
+        current: gameInfo,
+        series: metadata?.series ? [metadata.series] : [],
+        developers,
+        games,
+        metadataFor: (item) =>
+          collectionMetadata[collectionMetadataKey(item.runner, item.app_name)],
+        artFor: (item) =>
+          collectionArtMap[collectionArtKey(item.runner, item.app_name)],
+        steamAppIdFor: (item) => metas[item.app_name]?.steamAppId
+      }),
+    [
+      gameInfo,
+      metadata?.series,
+      developers,
+      games,
+      collectionMetadata,
+      collectionArtMap,
+      metas
+    ]
+  )
 
   async function openSteamFromCollection() {
     if (!steamAppId) return
@@ -476,6 +554,25 @@ function CollectionFocusPanel({
     }
     openInstallGameModal({ appName, runner, gameInfo })
   }
+
+  async function launchGame() {
+    const isOffline = connectivity.status !== 'online'
+    await launch({
+      appName,
+      t: tGame,
+      runner,
+      hasUpdate,
+      showDialogModal,
+      notPlayableOffline: isOffline && !gameInfo.canRunOffline
+    })
+  }
+
+  const emulatorLaunch = useEmulatorLaunchFlow({
+    appName,
+    title,
+    meta,
+    launchGame
+  })
 
   async function handlePlay() {
     if (!isInstalled && !isQueued && gameInfo.runner !== 'sideload') {
@@ -507,19 +604,8 @@ function CollectionFocusPanel({
       return window.api.removeFromDMQueue(appName)
     }
     if (isInstalled) {
-      if (emulatorNeedsRomPick(meta)) {
-        setPickRomOpen(true)
-        return
-      }
-      const isOffline = connectivity.status !== 'online'
-      await launch({
-        appName,
-        t: tGame,
-        runner,
-        hasUpdate,
-        showDialogModal,
-        notPlayableOffline: isOffline && !gameInfo.canRunOffline
-      })
+      if (emulatorLaunch.start()) return
+      await launchGame()
     }
   }
 
@@ -574,9 +660,9 @@ function CollectionFocusPanel({
             </p>
           </div>
           <CachedImage
-            key={cover}
-            src={cover}
-            fallback={fallBackImage}
+            key={cover.src}
+            src={cover.src}
+            fallback={cover.fallback}
             className="collectionFocus__cover"
             alt=""
           />
@@ -608,6 +694,12 @@ function CollectionFocusPanel({
                 </p>
               )}
             </section>
+            {onSelectGame && (
+              <CollectionRelatedGames
+                groups={relatedGroups}
+                onSelect={onSelectGame}
+              />
+            )}
           </div>
 
           <div className="collectionFocus__aside">
@@ -637,35 +729,6 @@ function CollectionFocusPanel({
                     </li>
                   ))}
                 </ul>
-              </section>
-            )}
-
-            {howLong && (howLong.mainStory || howLong.mainExtra) && (
-              <section className="collectionFocus__panel">
-                <h3>{tGame('howLongToBeat', 'How Long To Beat')}</h3>
-                <dl className="collectionFocus__hltb">
-                  <div>
-                    <dt>
-                      {tGame('how-long-to-beat.main-story', 'Main Story')}
-                    </dt>
-                    <dd>{formatHours(howLong.mainStory)}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      {tGame(
-                        'how-long-to-beat.main-plus-extras',
-                        'Main + Extras'
-                      )}
-                    </dt>
-                    <dd>{formatHours(howLong.mainExtra)}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      {tGame('how-long-to-beat.completionist', 'Completionist')}
-                    </dt>
-                    <dd>{formatHours(howLong.completionist)}</dd>
-                  </div>
-                </dl>
               </section>
             )}
 
@@ -798,6 +861,13 @@ function CollectionFocusPanel({
                 </dl>
               </div>
             </section>
+
+            {howLong && (howLong.mainStory || howLong.mainExtra) && (
+              <CollectionHowLongToBeat
+                info={howLong}
+                playedMinutes={playedMinutes}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -879,29 +949,7 @@ function CollectionFocusPanel({
           onClose={() => setMetadataOpen(false)}
         />
       )}
-      {pickRomOpen && meta?.roms && (
-        <PickRomDialog
-          title={title}
-          roms={meta.roms}
-          selectedPath={meta.selectedRomPath}
-          onClose={() => setPickRomOpen(false)}
-          onPlay={(romPath) => {
-            setPickRomOpen(false)
-            void (async () => {
-              await prepareEmulatorLaunch(appName, romPath)
-              const isOffline = connectivity.status !== 'online'
-              await launch({
-                appName,
-                t: tGame,
-                runner,
-                hasUpdate,
-                showDialogModal,
-                notPlayableOffline: isOffline && !gameInfo.canRunOffline
-              })
-            })()
-          }}
-        />
-      )}
+      {emulatorLaunch.dialogs}
     </aside>
   )
 }

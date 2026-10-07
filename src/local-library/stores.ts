@@ -12,6 +12,8 @@ type SessionFile = {
   sessions: Record<string, LocalGameSession[]>
 }
 
+const MAX_SESSIONS_PER_GAME = 200
+
 const libraryFile = new Store<LocalLibraryFile>({
   cwd: 'local_library',
   name: 'library',
@@ -24,6 +26,31 @@ const sessionFile = new Store<SessionFile>({
   defaults: { sessions: {} }
 })
 
+let playniteIndex: Map<string, string> | null = null
+let steamIndex: Map<string, string> | null = null
+
+function invalidateIndexes() {
+  playniteIndex = null
+  steamIndex = null
+}
+
+function ensureIndexes() {
+  if (playniteIndex && steamIndex) return
+  playniteIndex = new Map()
+  steamIndex = new Map()
+  for (const game of Object.values(libraryFile.get('games'))) {
+    if (game.playniteId) playniteIndex.set(game.playniteId, game.appName)
+    if (game.steamAppId) steamIndex.set(game.steamAppId, game.appName)
+  }
+}
+
+function newestSessions(sessions: LocalGameSession[]) {
+  if (sessions.length <= MAX_SESSIONS_PER_GAME) return sessions
+  return [...sessions]
+    .sort((left, right) => right.startedAt.localeCompare(left.startedAt))
+    .slice(0, MAX_SESSIONS_PER_GAME)
+}
+
 export function getLocalGameMeta(appName: string): LocalGameMeta | undefined {
   return libraryFile.get('games')[appName]
 }
@@ -33,27 +60,29 @@ export function getAllLocalGameMeta(): Record<string, LocalGameMeta> {
 }
 
 export function upsertLocalGameMeta(meta: LocalGameMeta) {
-  const games = { ...libraryFile.get('games') }
+  const games = libraryFile.get('games')
   games[meta.appName] = meta
   libraryFile.set('games', games)
+  invalidateIndexes()
 }
 
 export function findMetaByPlayniteId(
   playniteId: string
 ): LocalGameMeta | undefined {
-  return Object.values(libraryFile.get('games')).find(
-    (game) => game.playniteId === playniteId
-  )
+  if (!playniteId) return undefined
+  ensureIndexes()
+  const appName = playniteIndex?.get(playniteId)
+  return appName ? getLocalGameMeta(appName) : undefined
 }
 
 export function findMetaBySteamAppId(
   steamAppId: string
 ): LocalGameMeta | undefined {
   if (!steamAppId) return undefined
-  return Object.values(libraryFile.get('games')).find(
-    (game) =>
-      game.steamAppId === steamAppId || game.appName === `steam_${steamAppId}`
-  )
+  ensureIndexes()
+  const indexed = steamIndex?.get(steamAppId)
+  if (indexed) return getLocalGameMeta(indexed)
+  return getLocalGameMeta(`steam_${steamAppId}`)
 }
 
 export function getLocalSessions(appName: string): LocalGameSession[] {
@@ -65,19 +94,20 @@ export function replaceLocalSessions(
   appName: string,
   sessions: LocalGameSession[]
 ) {
-  const all = { ...sessionFile.get('sessions') }
-  all[appName] = sessions
+  const all = sessionFile.get('sessions')
+  all[appName] = newestSessions(sessions)
   sessionFile.set('sessions', all)
 }
 
 export function deleteLocalGameMeta(appName: string) {
-  const games = { ...libraryFile.get('games') }
+  const games = libraryFile.get('games')
   delete games[appName]
   libraryFile.set('games', games)
+  invalidateIndexes()
 }
 
 export function deleteLocalSessions(appName: string) {
-  const all = { ...sessionFile.get('sessions') }
+  const all = sessionFile.get('sessions')
   delete all[appName]
   sessionFile.set('sessions', all)
 }
